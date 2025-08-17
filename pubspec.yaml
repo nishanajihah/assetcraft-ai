@@ -15,8 +15,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
   
-  # State Management (Simple Riverpod - no code generation for now)
+  # State Management (Riverpod with code generation)
   flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
   
   # Navigation
   go_router: ^14.2.7
@@ -39,6 +40,12 @@ dependencies:
   # RevenueCat (Monetization)
   purchases_flutter: ^8.0.0
   
+  # Push Notifications (OneSignal)
+  onesignal_flutter: ^5.1.6
+  
+  # Google Mobile Ads (Rewarded Ads)
+  google_mobile_ads: ^5.1.0
+  
   # Image & Media Handling
   image: ^4.2.0
   image_picker: ^1.1.2
@@ -56,6 +63,7 @@ dependencies:
   permission_handler: ^11.3.1
   share_plus: ^10.0.2
   url_launcher: ^6.3.1
+  flutter_dotenv: ^5.1.0  # For loading .env files
   
   # Development & Debugging
   logger: ^2.4.0
@@ -65,15 +73,24 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   
-  # Code Generation (minimal set to avoid conflicts)
+  # Code Generation (Riverpod + Isar)
   build_runner: ^2.4.13
+  riverpod_generator: ^2.4.0
+  custom_lint: ^0.6.4
   isar_generator: ^3.1.0+1
+  
+  # TODO: Add riverpod_lint when analyzer version conflicts are resolved
+  # riverpod_lint: ^2.3.10  # Currently conflicts with isar_generator's analyzer dependency
 
 flutter:
   uses-material-design: true
   
-  # Assets (create these folders when needed)
-  # assets:
+  # Assets
+  assets:
+    - .env
+    - .env.development
+    - .env.staging
+    - .env.production
   #   - assets/images/
   #   - assets/icons/
   #   - assets/animations/

@@ -120,6 +120,45 @@ Desktop.ini
 # API Keys
 /lib/core/config/api_keys.dart
 
+# Additional API key patterns
+**/*api_key*
+**/*secret*
+**/*token*
+**/config/keys.dart
+**/config/credentials.dart
+
+# AI/ML model files (can be large)
+*.tflite
+*.mlmodel
+*.onnx
+*.pb
+models/
+ml_models/
+
+# Temporary AI generation files
+temp/
+tmp/
+.tmp/
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+*.app
+
+# IDE specific
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# Flutter version management
+.fvm/
+
+# Additional security
+*.keystore
+*.jks
+upload-keystore.jks
+
 # Local database (Isar)
 *.isar
 *.isar.lock
