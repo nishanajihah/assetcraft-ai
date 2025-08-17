@@ -1,0 +1,143 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# AssetCraft AI specific
+# Code generation
+*.g.dart
+*.freezed.dart
+
+# API Keys and Secrets (NEVER commit these!)
+.env
+.env.local
+.env.production
+.env.staging
+lib/core/config/api_keys.dart
+lib/core/config/secrets.dart
+
+# Generated assets and cache
+assets/generated/
+assets/cache/
+temp_assets/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.isar
+*.isar.lock
+
+# RevenueCat configuration
+ios/Runner/RevenueCat-Info.plist
+android/app/src/main/res/values/revenuecat_keys.xml
+
+# Platform-specific API configurations
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+lib/firebase_options.dart
+
+# Supabase configuration
+supabase/.env
+supabase/.env.local
+
+# Mock data and test assets
+test_assets/
+mock_responses/
+
+# User-generated content (for testing)
+user_assets/
+generated_images/
+
+# Analytics and crash reports
+crashlytics-build.properties
+firebase-debug.log
+
+# Local development certificates
+*.p12
+*.pem
+*.crt
+*.key
+
+# macOS specific
+.DS_Store?
+.Trashes
+Icon?
+._*
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# API Keys
+/lib/core/config/api_keys.dart
+
+# Local database (Isar)
+*.isar
+*.isar.lock
+
+# Asset cache
+/assets/cache/
+
+# User generated content
+/assets/user_generated/
+
+# Logs
+logs/
+*.log
+
+# RevenueCat
+**/android/app/google-services.json
+**/ios/Runner/GoogleService-Info.plist
+**/ios/firebase_app_id_file.json
+
+# Platform specific keys
+**/android/key.properties
