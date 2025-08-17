@@ -5,16 +5,6 @@ class AppConstants {
   static const String appTagline = 'Create. Design. Build.';
   static const String appVersion = '1.0.0';
 
-  // API Configuration
-  static const String geminiApiKey = 'YOUR_GEMINI_API_KEY'; // To be replaced
-  static const String supabaseUrl = 'YOUR_SUPABASE_URL'; // To be replaced
-  static const String supabaseAnonKey =
-      'YOUR_SUPABASE_ANON_KEY'; // To be replaced
-
-  // RevenueCat Configuration
-  static const String revenueCatApiKey =
-      'YOUR_REVENUECAT_KEY'; // To be replaced
-
   // Credit System
   static const int freeDailyCredits = 5;
   static const int starterPackCredits = 25;
@@ -72,35 +62,4 @@ class AppConstants {
   static const String assetGeneratedSuccess = 'Asset generated successfully!';
   static const String assetSavedSuccess = 'Asset saved to library';
   static const String creditsAddedSuccess = 'Credits added to account';
-}
-
-/// Feature flags for development/testing
-class FeatureFlags {
-  static const bool enableMockAI = true; // Set to false for production
-  static const bool enableAnalytics = false; // Enable for production
-  static const bool enablePushNotifications = false;
-  static const bool enableSocialSharing = true;
-  static const bool enableOfflineMode = true;
-}
-
-/// Environment configuration
-enum Environment { development, staging, production }
-
-class EnvironmentConfig {
-  static const Environment current = Environment.development;
-
-  static bool get isDevelopment => current == Environment.development;
-  static bool get isStaging => current == Environment.staging;
-  static bool get isProduction => current == Environment.production;
-
-  static String get baseUrl {
-    switch (current) {
-      case Environment.development:
-        return 'https://dev-api.assetcraft.ai';
-      case Environment.staging:
-        return 'https://staging-api.assetcraft.ai';
-      case Environment.production:
-        return 'https://api.assetcraft.ai';
-    }
-  }
 }
