@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../auth/repositories/auth_repository.dart';
+import '../auth/screens/login_screen.dart';
 
 /// Splash screen for AssetCraft AI
 /// Shows app logo and handles initialization
@@ -52,9 +54,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 1000));
 
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const AppShell()),
-      );
+      // Check authentication status
+      final authRepository = ref.read(authRepositoryProvider);
+      final isAuthenticated = authRepository.isAuthenticated;
+
+      if (isAuthenticated) {
+        // User is logged in, go to main app
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const AppShell()),
+        );
+      } else {
+        // User is not logged in, go to login screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
 

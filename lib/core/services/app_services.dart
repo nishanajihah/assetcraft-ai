@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+// import 'package:google_mobile_ads/google_mobile_ads.dart'; // Temporarily disabled
 import '../config/environment.dart';
 import '../utils/app_logger.dart';
 
@@ -43,14 +43,14 @@ class AppServices {
       }
     }
 
-    // Initialize Google Mobile Ads (only on mobile)
-    if (!kIsWeb) {
-      if (await _initializeGoogleAds()) {
-        successfulServices.add('Google Ads');
-      } else {
-        failedServices.add('Google Ads');
-      }
-    }
+    // Initialize Google Mobile Ads (only on mobile) - Temporarily disabled
+    // if (!kIsWeb) {
+    //   if (await _initializeGoogleAds()) {
+    //     successfulServices.add('Google Ads');
+    //   } else {
+    //     failedServices.add('Google Ads');
+    //   }
+    // }
 
     _isInitialized = true;
 
@@ -69,10 +69,14 @@ class AppServices {
   /// Initialize Supabase
   static Future<bool> _initializeSupabase() async {
     try {
-      if (!Environment.hasSupabaseConfig) {
+      // Check if we have valid Supabase configuration
+      if (!Environment.hasSupabaseConfig ||
+          Environment.supabaseUrl.contains('placeholder') ||
+          Environment.supabaseAnonKey.contains('placeholder')) {
         AppLogger.warning(
-          '⚠️ Supabase configuration missing (no SUPABASE_URL or SUPABASE_ANON_KEY), skipping initialization',
+          '⚠️ Supabase configuration missing or using placeholders, skipping initialization',
         );
+        AppLogger.info('💡 App will run in development mode without Supabase');
         return false;
       }
 
@@ -171,19 +175,19 @@ class AppServices {
     }
   }
 
-  /// Initialize Google Mobile Ads
-  static Future<bool> _initializeGoogleAds() async {
-    try {
-      await MobileAds.instance.initialize();
-
-      AppLogger.info('✅ Google Mobile Ads initialized');
-      return true;
-    } catch (e) {
-      AppLogger.warning('⚠️ Google Mobile Ads initialization failed: $e');
-      AppLogger.info('💡 Ads will be disabled');
-      return false;
-    }
-  }
+  /// Initialize Google Mobile Ads - Temporarily disabled
+  // static Future<bool> _initializeGoogleAds() async {
+  //   try {
+  //     await MobileAds.instance.initialize();
+  //
+  //     AppLogger.info('✅ Google Mobile Ads initialized');
+  //     return true;
+  //   } catch (e) {
+  //     AppLogger.warning('⚠️ Google Mobile Ads initialization failed: $e');
+  //     AppLogger.info('💡 Ads will be disabled');
+  //     return false;
+  //   }
+  // }
 
   /// Check if services are initialized
   static bool get isInitialized => _isInitialized;
