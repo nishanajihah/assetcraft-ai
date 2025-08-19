@@ -5,10 +5,11 @@ import 'dart:math';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/ai_service.dart';
+import '../../../core/services/user_service.dart';
 import '../../../core/providers/credits_provider.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../shared/widgets/neu_container.dart';
 import '../../../shared/widgets/enhanced_containers.dart';
+import '../providers/generation_state_providers.dart';
 
 /// Generation steps for progressive UI flow
 enum GenerationStep {
@@ -60,6 +61,11 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         });
       }
     });
+
+    // Listen to focus changes for enhanced input styling
+    _promptFocusNode.addListener(() {
+      setState(() {}); // Rebuild to update focus state
+    });
   }
 
   @override
@@ -76,16 +82,40 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       return;
     }
 
-    final creditsNotifier = ref.read(userCreditsNotifierProvider.notifier);
+    try {
+      // Try to use UserService first
+      final userService = ref.read(userServiceProvider);
 
-    // Check if user has enough credits
-    if (!creditsNotifier.deductCredits(1)) {
-      _showError(
-        'Insufficient credits. You need 1 Gemstone to generate an asset.',
-      );
-      return;
+      // Check if user has enough credits
+      final currentCredits = await userService.getCredits();
+      if (currentCredits <= 0) {
+        _showError("You're out of Gemstones!");
+        return;
+      }
+
+      // Deduct credit before starting generation
+      await userService.deductCredit();
+      await _performGeneration(userService: userService);
+    } catch (e) {
+      // Fallback to local credits provider if UserService fails
+      AppLogger.warning('UserService failed, using local credits: $e');
+
+      final creditsNotifier = ref.read(userCreditsNotifierProvider.notifier);
+
+      // Check if user has enough credits
+      if (!creditsNotifier.deductCredits(1)) {
+        _showError("You're out of Gemstones!");
+        return;
+      }
+
+      await _performGeneration(creditsNotifier: creditsNotifier);
     }
+  }
 
+  Future<void> _performGeneration({
+    UserService? userService,
+    UserCreditsNotifier? creditsNotifier,
+  }) async {
     setState(() {
       _currentStep = GenerationStep.generating;
       _isGenerating = true;
@@ -97,7 +127,11 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
     try {
       final aiService = ref.read(aiServiceProvider);
-      final prompt = '$_selectedAssetType: ${_promptController.text.trim()}';
+
+      // Build enhanced prompt with all selected options
+      String prompt = _buildEnhancedPrompt();
+
+      AppLogger.debug('Generating asset with prompt: $prompt');
 
       final imageData = await aiService.generateAssetFromPrompt(prompt);
 
@@ -115,7 +149,11 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           _isGenerating = false;
         });
         // Refund credits on failure
-        creditsNotifier.addCredits(1);
+        if (userService != null) {
+          await userService.addCredits(1);
+        } else if (creditsNotifier != null) {
+          creditsNotifier.addCredits(1);
+        }
       }
     } catch (e) {
       setState(() {
@@ -123,14 +161,28 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         _currentStep = GenerationStep.promptInput;
         _isGenerating = false;
       });
-      // Refund credits on error
-      creditsNotifier.addCredits(1);
+
+      // Try to refund credits on error
+      try {
+        if (userService != null) {
+          await userService.addCredits(1);
+        } else if (creditsNotifier != null) {
+          creditsNotifier.addCredits(1);
+        }
+      } catch (refundError) {
+        AppLogger.error('Failed to refund credit: $refundError');
+      }
     } finally {
       _loadingController.stop();
     }
   }
 
   void _onAssetTypeSelected(String assetType) {
+    // Update the new state providers
+    ref.read(selectedCategoryProvider.notifier).setCategory(assetType);
+    ref.read(selectedLogoTypeProvider.notifier).clearLogoType();
+    ref.read(selectedColorCountProvider.notifier).clearColorCount();
+
     setState(() {
       _selectedAssetType = assetType;
       _availableSubtypes = _getAssetSubtypes(assetType);
@@ -209,6 +261,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       _selectedColors = List.filled(colorCount, ''); // Initialize color slots
       _currentStep = GenerationStep.colorInput; // Go to color input step
     });
+
+    // Update the Riverpod provider
+    ref.read(selectedColorCountProvider.notifier).setColorCount(colorCount);
   }
 
   void _goBackToAssetTypeSelection() {
@@ -218,14 +273,6 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       _selectedAssetSubtype = '';
       _selectedColorCount = null;
       _availableSubtypes = [];
-    });
-  }
-
-  void _goBackToAssetSubtypeSelection() {
-    setState(() {
-      _currentStep = GenerationStep.assetSubtypeSelection;
-      _selectedAssetSubtype = '';
-      _selectedColorCount = null;
     });
   }
 
@@ -261,43 +308,773 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final totalCredits = ref.watch(totalAvailableCreditsProvider);
+    final userCreditsAsync = ref.watch(userCreditsProvider);
+    final localCredits = ref.watch(totalAvailableCreditsProvider);
     final isAiAvailable = ref.watch(isAiServiceAvailableProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 800;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topCenter,
-            radius: 1.2,
-            colors: [
-              AppColors.backgroundPrimary.withValues(alpha: 0.95),
-              AppColors.backgroundPrimary,
-              AppColors.backgroundSecondary.withValues(alpha: 0.1),
+    // Watch the new state providers
+    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final selectedLogoType = ref.watch(selectedLogoTypeProvider);
+    final selectedColorCount = ref.watch(selectedColorCountProvider);
+    final suggestionsAsync = ref.watch(suggestionsProvider);
+    final expertSuggestionsAsync = ref.watch(expertSuggestionsProvider);
+    final isGenerationReady = ref.watch(isGenerationReadyProvider);
+
+    return userCreditsAsync.when(
+      data: (totalCredits) => Scaffold(
+        backgroundColor: AppColors.backgroundPrimary,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.topCenter,
+              radius: 1.2,
+              colors: [
+                AppColors.backgroundPrimary.withValues(alpha: 0.95),
+                AppColors.backgroundPrimary,
+                AppColors.backgroundSecondary.withValues(alpha: 0.1),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Floating Header with Stats
+                _buildFloatingHeader(totalCredits),
+
+                // Main Content Area - Enhanced with state providers
+                Expanded(
+                  child: _buildEnhancedProgressiveContent(
+                    isAiAvailable,
+                    totalCredits,
+                    isLargeScreen,
+                    selectedCategory,
+                    selectedLogoType,
+                    selectedColorCount,
+                    suggestionsAsync,
+                    expertSuggestionsAsync,
+                    isGenerationReady,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      loading: () => Scaffold(
+        backgroundColor: AppColors.backgroundPrimary,
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) {
+        // Fallback to local credits provider if UserService fails
+        AppLogger.warning('UserService failed, using local credits: $error');
+        return Scaffold(
+          backgroundColor: AppColors.backgroundPrimary,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.2,
+                colors: [
+                  AppColors.backgroundPrimary.withValues(alpha: 0.95),
+                  AppColors.backgroundPrimary,
+                  AppColors.backgroundSecondary.withValues(alpha: 0.1),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Floating Header with Stats
+                  _buildFloatingHeader(localCredits),
+
+                  // Main Content Area - Enhanced with fallback to existing logic
+                  Expanded(
+                    child: _buildProgressiveContent(
+                      isAiAvailable,
+                      localCredits,
+                      isLargeScreen,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Enhanced Progressive Content with State Providers
+  Widget _buildEnhancedProgressiveContent(
+    bool isAiAvailable,
+    int totalCredits,
+    bool isLargeScreen,
+    String? selectedCategory,
+    String? selectedLogoType,
+    int? selectedColorCount,
+    AsyncValue<List<String>> suggestionsAsync,
+    AsyncValue<List<String>> expertSuggestionsAsync,
+    bool isGenerationReady,
+  ) {
+    // If we're using the enhanced flow and have a selected category
+    if (selectedCategory != null && selectedCategory.isNotEmpty) {
+      return _buildEnhancedCategoryFlow(
+        isAiAvailable,
+        totalCredits,
+        isLargeScreen,
+        selectedCategory,
+        selectedLogoType,
+        selectedColorCount,
+        suggestionsAsync,
+        expertSuggestionsAsync,
+        isGenerationReady,
+      );
+    }
+
+    // Fallback to existing progressive content flow
+    return _buildProgressiveContent(isAiAvailable, totalCredits, isLargeScreen);
+  }
+
+  // Enhanced Category Flow with Dynamic UI
+  Widget _buildEnhancedCategoryFlow(
+    bool isAiAvailable,
+    int totalCredits,
+    bool isLargeScreen,
+    String selectedCategory,
+    String? selectedLogoType,
+    int? selectedColorCount,
+    AsyncValue<List<String>> suggestionsAsync,
+    AsyncValue<List<String>> expertSuggestionsAsync,
+    bool isGenerationReady,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Enhanced Header with Category
+          _buildEnhancedHeader(selectedCategory),
+          const SizedBox(height: 24),
+
+          // Category-specific options
+          if (selectedCategory == 'Logo') ...[
+            _buildLogoSpecificOptions(selectedLogoType, selectedColorCount),
+            const SizedBox(height: 24),
+          ],
+
+          // Suggestions Section
+          _buildSuggestionsSection(suggestionsAsync, expertSuggestionsAsync),
+          const SizedBox(height: 24),
+
+          // Prompt Input with enhanced features
+          Expanded(
+            child: _buildEnhancedPromptInput(isAiAvailable, totalCredits),
+          ),
+
+          // Enhanced Generation Controls
+          _buildEnhancedGenerationControls(
+            isAiAvailable,
+            totalCredits,
+            isGenerationReady,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Enhanced Header
+  Widget _buildEnhancedHeader(String selectedCategory) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.primaryGold.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.primaryGold.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Icon(
+            _getAssetTypeIcon(selectedCategory),
+            color: AppColors.primaryGold,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Creating $selectedCategory',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                'Configure your preferences below',
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              ),
             ],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Floating Header with Stats
-              _buildFloatingHeader(totalCredits),
+        TextButton.icon(
+          onPressed: () {
+            ref.read(selectedCategoryProvider.notifier).clearCategory();
+            ref.read(selectedLogoTypeProvider.notifier).clearLogoType();
+            ref.read(selectedColorCountProvider.notifier).clearColorCount();
+          },
+          icon: Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+          label: Text(
+            'Change',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
 
-              // Main Content Area - Progressive UI Flow
-              Expanded(
-                child: _buildProgressiveContent(
-                  isAiAvailable,
-                  totalCredits,
-                  isLargeScreen,
+  // Logo-specific options
+  Widget _buildLogoSpecificOptions(
+    String? selectedLogoType,
+    int? selectedColorCount,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Logo Type',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Logo type radio buttons
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children:
+              ['Logo only', 'Logo + Name', 'Name only', 'Logo, Name, & Tagline']
+                  .map(
+                    (logoType) =>
+                        _buildLogoTypeOption(logoType, selectedLogoType),
+                  )
+                  .toList(),
+        ),
+
+        // Color count selection (only show if "Logo only" is selected)
+        if (selectedLogoType == 'Logo only') ...[
+          const SizedBox(height: 20),
+          Text(
+            'Number of Colors',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            children: [1, 2, 3, 4]
+                .map(
+                  (count) => _buildColorCountOption(count, selectedColorCount),
+                )
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Logo type option widget
+  Widget _buildLogoTypeOption(String logoType, String? selectedLogoType) {
+    final isSelected = selectedLogoType == logoType;
+    return GestureDetector(
+      onTap: () {
+        ref.read(selectedLogoTypeProvider.notifier).setLogoType(logoType);
+        if (logoType != 'Logo only') {
+          // Clear color count if not "Logo only"
+          ref.read(selectedColorCountProvider.notifier).clearColorCount();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryGold.withValues(alpha: 0.2)
+              : AppColors.backgroundSecondary.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primaryGold
+                : AppColors.backgroundSecondary.withValues(alpha: 0.5),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          logoType,
+          style: TextStyle(
+            color: isSelected ? AppColors.primaryGold : AppColors.textPrimary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Color count option widget with tooltip
+  Widget _buildColorCountOption(int count, int? selectedColorCount) {
+    final isSelected = selectedColorCount == count;
+
+    String tooltipMessage;
+    switch (count) {
+      case 1:
+        tooltipMessage =
+            'Single color design - Perfect for minimalist and professional looks';
+        break;
+      case 2:
+        tooltipMessage =
+            'Two-color design - Great for contrast and visual hierarchy';
+        break;
+      case 3:
+        tooltipMessage =
+            'Three-color design - Ideal for vibrant and dynamic logos';
+        break;
+      case 4:
+        tooltipMessage =
+            'Four-color design - Rich palette for complex branding';
+        break;
+      case 5:
+        tooltipMessage =
+            'Five-color design - Full spectrum for creative expression';
+        break;
+      default:
+        tooltipMessage = '$count-color design - Custom color palette';
+    }
+
+    return Tooltip(
+      message: tooltipMessage,
+      preferBelow: false, // Show above instead of below to avoid bottom popup
+      showDuration: const Duration(seconds: 3),
+      waitDuration: const Duration(milliseconds: 500),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.neuShadowDark.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      textStyle: TextStyle(color: AppColors.textPrimary, fontSize: 12),
+      child: GestureDetector(
+        onTap: () {
+          ref.read(selectedColorCountProvider.notifier).setColorCount(count);
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primaryGold.withValues(alpha: 0.2)
+                : AppColors.backgroundSecondary.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primaryGold
+                  : AppColors.backgroundSecondary.withValues(alpha: 0.5),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$count',
+                style: TextStyle(
+                  color: isSelected
+                      ? AppColors.primaryGold
+                      : AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Color${count > 1 ? 's' : ''}',
+                style: TextStyle(
+                  color: isSelected
+                      ? AppColors.primaryGold.withValues(alpha: 0.8)
+                      : AppColors.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // Suggestions Section
+  Widget _buildSuggestionsSection(
+    AsyncValue<List<String>> suggestionsAsync,
+    AsyncValue<List<String>> expertSuggestionsAsync,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'AI Suggestions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            // AI Suggest button to refresh suggestions
+            Consumer(
+              builder: (context, ref, child) {
+                final suggestionsAsync = ref.watch(suggestionsProvider);
+                final expertSuggestionsAsync = ref.watch(
+                  expertSuggestionsProvider,
+                );
+                final isLoading =
+                    suggestionsAsync.isLoading ||
+                    expertSuggestionsAsync.isLoading;
+
+                return TextButton.icon(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          // Invalidate both providers to refresh suggestions
+                          ref.invalidate(suggestionsProvider);
+                          ref.invalidate(expertSuggestionsProvider);
+                        },
+                  icon: isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryGold,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          Icons.refresh,
+                          size: 18,
+                          color: AppColors.primaryGold,
+                        ),
+                  label: Text(
+                    isLoading ? 'Getting Ideas...' : 'New Suggestions',
+                    style: TextStyle(
+                      color: AppColors.primaryGold,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.primaryGold.withValues(
+                      alpha: 0.1,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Expert suggestions (preferred)
+        expertSuggestionsAsync.when(
+          data: (suggestions) => suggestions.isNotEmpty
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Expert Picks',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primaryGold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...suggestions.map(
+                      (suggestion) => _buildSuggestionChip(suggestion),
+                    ),
+                  ],
+                )
+              : const SizedBox.shrink(),
+          loading: () => _buildSuggestionsLoading(),
+          error: (error, stack) => _buildSuggestionsError(),
+        ),
+
+        // Fallback to regular suggestions if expert suggestions fail
+        expertSuggestionsAsync.when(
+          data: (suggestions) => suggestions.isEmpty
+              ? suggestionsAsync.when(
+                  data: (regularSuggestions) => regularSuggestions.isNotEmpty
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 12),
+                            Text(
+                              'Creative Ideas',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...regularSuggestions
+                                .take(3)
+                                .map(
+                                  (suggestion) =>
+                                      _buildSuggestionChip(suggestion),
+                                ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                  loading: () => const SizedBox.shrink(),
+                  error: (error, stack) => const SizedBox.shrink(),
+                )
+              : const SizedBox.shrink(),
+          loading: () => const SizedBox.shrink(),
+          error: (error, stack) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  // Individual suggestion chip
+  Widget _buildSuggestionChip(String suggestion) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: () {
+          _promptController.text = suggestion;
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.backgroundSecondary.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColors.backgroundSecondary.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  suggestion,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Suggestions loading state
+  Widget _buildSuggestionsLoading() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGold),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Getting creative suggestions...',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Suggestions error state
+  Widget _buildSuggestionsError() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            'Failed to load suggestions',
+            style: TextStyle(color: AppColors.error, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Enhanced Prompt Input
+  Widget _buildEnhancedPromptInput(bool isAiAvailable, int totalCredits) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primaryGold.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Describe Your Vision',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: TextField(
+              controller: _promptController,
+              focusNode: _promptFocusNode,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              decoration: InputDecoration(
+                hintText:
+                    'Enter a detailed description of what you want to create...',
+                hintStyle: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Enhanced Generation Controls
+  Widget _buildEnhancedGenerationControls(
+    bool isAiAvailable,
+    int totalCredits,
+    bool isGenerationReady,
+  ) {
+    return Row(
+      children: [
+        // Cost display
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundSecondary.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.diamond, color: AppColors.primaryGold, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                '1 Gemstone',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // Generate button
+        Expanded(
+          child: ElevatedButton(
+            onPressed:
+                (_promptController.text.trim().isNotEmpty &&
+                    isAiAvailable &&
+                    totalCredits > 0 &&
+                    isGenerationReady)
+                ? _generateAsset
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGold,
+              foregroundColor: AppColors.textOnGold,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.auto_awesome, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Generate Asset',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -399,45 +1176,155 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     );
   }
 
-  // Step 3: Generating (Loading)
+  // Step 3: Generating (Loading with condensed UI and preview area)
   Widget _buildGeneratingStep(bool isLargeScreen) {
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildStepIndicator(5, "Creating Your Asset"),
-          const SizedBox(height: 32),
-
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+          // Condensed prompt display (shrunk)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            height: 80, // Shrunk from full height
+            child: EnhancedNeuContainer(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 6,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primaryGold,
+                  Icon(
+                    Icons.auto_awesome,
+                    color: AppColors.primaryGold,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Generating: $_selectedAssetType',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _promptController.text.isNotEmpty
+                              ? _promptController.text.length > 50
+                                    ? '${_promptController.text.substring(0, 50)}...'
+                                    : _promptController.text
+                              : 'No prompt provided',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Preview area that appears during generation
+          Expanded(
+            child: EnhancedNeuContainer(
+              padding: const EdgeInsets.all(24),
+              hasGoldAccent: true,
+              child: Column(
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.preview,
+                        color: AppColors.primaryGold,
+                        size: 24,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Generating Preview',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 24),
-                  Text(
-                    'Generating your $_selectedAssetType...',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'This may take a few moments',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
+
+                  // Loading preview area
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundSecondary.withValues(
+                          alpha: 0.3,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.neuShadowDark.withValues(
+                              alpha: 0.3,
+                            ),
+                            offset: const Offset(4, 4),
+                            blurRadius: 8,
+                            spreadRadius: -2,
+                          ),
+                          BoxShadow(
+                            color: AppColors.neuHighlight.withValues(
+                              alpha: 0.8,
+                            ),
+                            offset: const Offset(-2, -2),
+                            blurRadius: 6,
+                            spreadRadius: -1,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              height: 60,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 4,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.primaryGold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Creating your $_selectedAssetType...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'This may take a few moments',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -869,153 +1756,55 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
   }
 
   Widget _buildLargeAssetTypeCard(String assetType) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => _onAssetTypeSelected(assetType),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            // Enhanced glassmorphism background
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.backgroundSecondary.withValues(alpha: 0.6),
-                AppColors.backgroundSecondary.withValues(alpha: 0.3),
-                AppColors.backgroundSecondary.withValues(alpha: 0.5),
-              ],
-              stops: const [0.0, 0.5, 1.0],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            // Enhanced glassmorphism border
-            border: Border.all(
-              color: AppColors.primaryGold.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              // Strong neumorphic dark shadow (bottom-right)
-              BoxShadow(
-                color: AppColors.neuShadowDark.withValues(alpha: 0.25),
-                blurRadius: 16,
-                offset: const Offset(8, 8),
-                spreadRadius: 0,
-              ),
-              // Neumorphic light shadow (top-left)
-              BoxShadow(
-                color: AppColors.neuHighlight.withValues(alpha: 0.9),
-                blurRadius: 16,
-                offset: const Offset(-4, -4),
-                spreadRadius: 0,
-              ),
-              // Enhanced depth shadow
-              BoxShadow(
-                color: AppColors.neuShadowDark.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-                spreadRadius: 2,
-              ),
-              // Inner glow for glassmorphism
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.6),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-                spreadRadius: 0,
-              ),
-            ],
+    final isSelected = _selectedAssetType == assetType;
+    return EnhancedCardContainer(
+      isSelected: isSelected,
+      onTap: () => _onAssetTypeSelected(assetType),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Enhanced Icon Container
+          EnhancedIconContainer(
+            icon: _getAssetTypeIcon(assetType),
+            size: 24,
+            containerSize: 48,
+            hasStrongGlow: isSelected,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Enhanced Icon Container with strong glassmorphism
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    // Multi-layer gradient for depth
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.primaryGold.withValues(alpha: 0.4),
-                        AppColors.primaryGold.withValues(alpha: 0.1),
-                        AppColors.primaryYellow.withValues(alpha: 0.2),
-                      ],
-                      stops: const [0.0, 0.6, 1.0],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primaryGold.withValues(alpha: 0.6),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      // Strong neumorphic shadows
-                      BoxShadow(
-                        color: AppColors.neuShadowDark.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(4, 4),
-                        spreadRadius: 0,
-                      ),
-                      BoxShadow(
-                        color: AppColors.neuHighlight.withValues(alpha: 0.8),
-                        blurRadius: 12,
-                        offset: const Offset(-2, -2),
-                        spreadRadius: 0,
-                      ),
-                      // Enhanced glow effect
-                      BoxShadow(
-                        color: AppColors.primaryGold.withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 0),
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _getAssetTypeIcon(assetType),
-                    size: 24,
-                    color: AppColors.primaryGold,
-                  ),
-                ),
 
-                const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-                // Asset Type Name
-                Text(
-                  assetType,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+          // Asset Type Name
+          Text(
+            assetType,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
 
-                const SizedBox(height: 2),
+          const SizedBox(height: 2),
 
-                // Description - Flexible instead of Expanded to avoid overflow
-                Flexible(
-                  child: Text(
-                    _getAssetTypeDescription(assetType),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                      height: 1.2,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+          // Description - Flexible instead of Expanded to avoid overflow
+          Flexible(
+            child: Text(
+              _getAssetTypeDescription(assetType),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1244,7 +2033,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         ),
         const SizedBox(height: 12),
 
-        // Color Suggestion Button
+        // Auto-Select Color Count Button
         TextButton.icon(
           onPressed: _generateColorCountSuggestion,
           icon: Icon(
@@ -1253,7 +2042,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
             size: 18,
           ),
           label: Text(
-            'Suggest Color Count',
+            'Auto-Select Count',
             style: TextStyle(
               color: AppColors.primaryGold,
               fontSize: 14,
@@ -1847,10 +2636,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
   // Prompt Input Section
   Widget _buildPromptInput(bool isAiAvailable, int totalCredits) {
-    return NeuContainer(
+    return EnhancedNeuContainer(
       padding: const EdgeInsets.all(20),
-      borderRadius: 20,
-      depth: 8,
+      hasGoldAccent: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -1905,60 +2693,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           const SizedBox(height: 16),
 
           // Enhanced Text Input with Strong Glassmorphism
-          Container(
-            constraints: const BoxConstraints(
-              minHeight: 140, // Minimum height for better visibility
-              maxHeight: 200, // Maximum height to prevent overflow
-            ),
-            padding: const EdgeInsets.all(18), // Increased padding
-            decoration: BoxDecoration(
-              // Enhanced glassmorphism gradient
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.backgroundSecondary.withValues(alpha: 0.6),
-                  AppColors.backgroundSecondary.withValues(alpha: 0.3),
-                  AppColors.backgroundSecondary.withValues(alpha: 0.5),
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              // Enhanced glassmorphism border
-              border: Border.all(
-                color: AppColors.primaryGold.withValues(alpha: 0.5),
-                width: 1.5,
-              ),
-              boxShadow: [
-                // Strong neumorphic inset shadows for input field
-                BoxShadow(
-                  color: AppColors.neuShadowDark.withValues(alpha: 0.2),
-                  offset: const Offset(3, 3),
-                  blurRadius: 6,
-                  spreadRadius: -1,
-                ),
-                BoxShadow(
-                  color: AppColors.neuHighlight.withValues(alpha: 0.8),
-                  offset: const Offset(-1, -1),
-                  blurRadius: 3,
-                  spreadRadius: 0,
-                ),
-                // Enhanced outer depth
-                BoxShadow(
-                  color: AppColors.neuShadowDark.withValues(alpha: 0.15),
-                  offset: const Offset(0, 8),
-                  blurRadius: 16,
-                  spreadRadius: 1,
-                ),
-                // Subtle glow
-                BoxShadow(
-                  color: Colors.white.withValues(alpha: 0.4),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
+          EnhancedInputContainer(
+            hasFocus: _promptFocusNode.hasFocus,
+            minHeight: 140,
             child: TextField(
               controller: _promptController,
               focusNode: _promptFocusNode,
@@ -2325,10 +3062,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
   // Preview Area - Large Display
   Widget _buildPreviewArea() {
-    return NeuContainer(
+    return EnhancedNeuContainer(
       padding: const EdgeInsets.all(24),
-      borderRadius: 24,
-      depth: 12,
+      hasGoldAccent: true,
       child: Column(
         children: [
           // Header
@@ -2399,10 +3135,8 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           // Error Display
           if (_error != null) ...[
             const SizedBox(height: 20),
-            GlassContainer(
+            EnhancedGlassContainer(
               padding: const EdgeInsets.all(16),
-              borderRadius: 12,
-              opacity: 0.1,
               child: Container(
                 decoration: BoxDecoration(
                   border: Border.all(
@@ -2541,83 +3275,125 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     return '${baseHint}Example: "A minimalist calendar icon with clean lines and modern styling"';
   }
 
-  // Helper method to generate color count suggestions
-  void _generateColorCountSuggestion() {
-    final suggestions = _getColorCountSuggestions(
-      _selectedAssetType,
-      _selectedAssetSubtype,
-    );
+  // Build enhanced prompt with all selected options
+  String _buildEnhancedPrompt() {
+    String basePrompt = _promptController.text.trim();
+    List<String> promptParts = [];
 
-    final random = Random();
-    final suggestion = suggestions[random.nextInt(suggestions.length)];
+    // Add asset type
+    if (_selectedAssetType.isNotEmpty) {
+      promptParts.add(_selectedAssetType);
+    }
 
-    // Show as a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(suggestion, style: const TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primaryGold,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Got it!',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
+    // Add asset subtype if available
+    if (_selectedAssetSubtype.isNotEmpty &&
+        _selectedAssetSubtype != _selectedAssetType) {
+      promptParts.add('($_selectedAssetSubtype style)');
+    }
+
+    // Add user description
+    promptParts.add(basePrompt);
+
+    // Add color information if colors are selected
+    if (_selectedColors.isNotEmpty &&
+        _selectedColors.any((color) => color.isNotEmpty)) {
+      List<String> validColors = _selectedColors
+          .where((color) => color.isNotEmpty)
+          .toList();
+      if (validColors.isNotEmpty) {
+        if (validColors.length == 1) {
+          promptParts.add('using ${validColors.first} color');
+        } else {
+          promptParts.add('using colors: ${validColors.join(', ')}');
+        }
+      }
+    } else if (_selectedColorCount != null && _selectedColorCount! > 0) {
+      promptParts.add(
+        'using $_selectedColorCount color${_selectedColorCount! > 1 ? 's' : ''}',
+      );
+    }
+
+    // Add quality and style modifiers
+    promptParts.add('high quality, professional design, clean and modern');
+
+    return promptParts.join(', ');
   }
 
-  List<String> _getColorCountSuggestions(String assetType, String subtype) {
-    switch (assetType) {
+  // Helper method to auto-select a random color count
+  void _generateColorCountSuggestion() {
+    // Get optimal color counts based on asset type and subtype
+    List<int> optimalCounts;
+
+    switch (_selectedAssetType) {
       case 'Logo':
-        return [
-          'Use 1-2 colors for a clean, professional look',
-          'Try 2-3 colors for brand recognition and versatility',
-          'Consider 1 color for timeless simplicity',
-          '3-4 colors can work for complex brand identities',
-        ];
-      case 'Character':
-        return [
-          'Use 2-3 main colors for character design',
-          'Try 3-4 colors for detailed character variations',
-          'Consider 2 colors for simple, iconic characters',
-          '4 colors allow for rich character details',
-        ];
-      case 'UI Element':
-        return [
-          'Use 1-2 colors for consistent UI theming',
-          'Try 2-3 colors for interactive state variations',
-          'Consider 1 primary color for unified design',
-          '3 colors work well for complex UI components',
-        ];
+        switch (_selectedAssetSubtype) {
+          case 'Wordmark':
+          case 'Monogram':
+            optimalCounts = [1, 2];
+            break;
+          case 'Pictorial':
+          case 'Abstract':
+            optimalCounts = [2, 3, 4];
+            break;
+          case 'Combination':
+          case 'Emblem':
+            optimalCounts = [2, 3];
+            break;
+          default:
+            optimalCounts = [1, 2, 3];
+        }
+        break;
       case 'Icon':
-        return [
-          'Use 1-2 colors for clear, recognizable icons',
-          'Try 2 colors for depth and visual interest',
-          'Consider 1 color for minimal, modern icons',
-          '3 colors can add personality to icons',
-        ];
-      case 'Background':
-        return [
-          'Use 2-3 colors for gradient backgrounds',
-          'Try 1-2 colors for subtle, elegant backgrounds',
-          'Consider 3-4 colors for dynamic, vibrant backgrounds',
-          '2 colors work great for professional backgrounds',
-        ];
-      case 'Object':
-        return [
-          'Use 2-3 colors for realistic object rendering',
-          'Try 1-2 colors for minimalist object design',
-          'Consider 3-4 colors for detailed, textured objects',
-          '2 colors balance simplicity and detail',
-        ];
+        optimalCounts = [1, 2];
+        break;
+      case 'Illustration':
+        optimalCounts = [3, 4, 5];
+        break;
       default:
-        return [
-          'Use 1-3 colors for most designs',
-          'Try 2 colors for balanced visual appeal',
-        ];
+        optimalCounts = [1, 2, 3];
     }
+
+    // Randomly select from optimal counts
+    final random = Random();
+    final selectedCount = optimalCounts[random.nextInt(optimalCounts.length)];
+
+    // Update both local state and provider
+    setState(() {
+      _selectedColorCount = selectedCount;
+      _selectedColors = List.filled(selectedCount, '');
+    });
+
+    // Update the Riverpod provider
+    ref.read(selectedColorCountProvider.notifier).setColorCount(selectedCount);
+
+    // Show feedback with the selected count
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Auto-selected $selectedCount color${selectedCount > 1 ? 's' : ''} - perfect for your $_selectedAssetSubtype!',
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: AppColors.primaryGold,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    // Auto-navigate to the next step after a brief delay
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted &&
+          _selectedAssetType == 'Logo' &&
+          _selectedAssetSubtype == 'Logo only') {
+        // For "Logo only", go directly to prompt input since colors are needed
+        setState(() {
+          _currentStep = GenerationStep.colorInput;
+        });
+      } else {
+        // For other types, go to prompt input
+        setState(() {
+          _currentStep = GenerationStep.promptInput;
+        });
+      }
+    });
   }
 
   // Helper method to generate color input suggestions

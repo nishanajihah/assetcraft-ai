@@ -91,6 +91,16 @@ class Environment {
       dotenv.get('PADDLE_VENDOR_ID', fallback: '');
   static String get paddleApiKey => dotenv.get('PADDLE_API_KEY', fallback: '');
 
+  // Gemini AI Model Configuration
+  static String get geminiTextModel =>
+      dotenv.get('GEMINI_TEXT_MODEL', fallback: 'gemini-1.5-flash');
+  static String get geminiImageModel => dotenv.get(
+    'GEMINI_IMAGE_MODEL',
+    fallback: 'gemini-2.0-flash-preview-image-generation',
+  );
+  static String get geminiSuggestionsModel =>
+      dotenv.get('GEMINI_SUGGESTIONS_MODEL', fallback: 'gemini-1.5-flash');
+
   // Validation methods
   static bool get hasSupabaseConfig =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
