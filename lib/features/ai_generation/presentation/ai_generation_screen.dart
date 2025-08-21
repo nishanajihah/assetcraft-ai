@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data';
 import 'dart:math';
+import 'dart:ui' as ui;
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/ai_service.dart';
@@ -10,6 +13,8 @@ import '../../../core/providers/credits_provider.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../shared/widgets/enhanced_containers.dart';
 import '../providers/generation_state_providers.dart';
+import '../../assets/models/asset_model.dart';
+import '../../assets/providers/asset_providers.dart';
 
 /// Generation steps for progressive UI flow
 enum GenerationStep {
@@ -32,6 +37,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     with TickerProviderStateMixin {
   final TextEditingController _promptController = TextEditingController();
   final FocusNode _promptFocusNode = FocusNode();
+  List<TextEditingController> _colorControllers = [];
 
   // Progressive UI state
   GenerationStep _currentStep = GenerationStep.assetTypeSelection;
@@ -41,6 +47,8 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
   List<String> _selectedColors = []; // Track user-input colors
   List<String> _availableSubtypes = [];
   bool _isGenerating = false;
+  bool _isGeneratingSuggestion = false; // Track AI suggestion loading
+  bool _isSaving = false; // Track asset saving status
   Uint8List? _generatedImageData;
   String? _error;
   late AnimationController _loadingController;
@@ -73,6 +81,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     _promptController.dispose();
     _promptFocusNode.dispose();
     _loadingController.dispose();
+    _disposeColorControllers(); // Dispose color controllers
     super.dispose();
   }
 
@@ -136,12 +145,24 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       final imageData = await aiService.generateAssetFromPrompt(prompt);
 
       if (imageData != null) {
-        setState(() {
-          _generatedImageData = imageData;
-          _currentStep = GenerationStep.preview;
-          _isGenerating = false;
-        });
-        _showSuccess('Asset generated successfully!');
+        AppLogger.info('🖼️ Received image data: ${imageData.length} bytes');
+
+        // Validate image data before setting it
+        if (_isValidImageData(imageData)) {
+          AppLogger.info('✅ Image validation passed, setting state');
+          setState(() {
+            _generatedImageData = imageData;
+            _currentStep = GenerationStep.preview;
+            _isGenerating = false;
+          });
+          _showSuccess('Asset generated successfully!');
+        } else {
+          AppLogger.warning('⚠️ Generated image data failed validation');
+          setState(() {
+            _error = 'Generated image is corrupted. Please try again.';
+            _isGenerating = false;
+          });
+        }
       } else {
         setState(() {
           _error = 'Failed to generate asset. Please try again.';
@@ -262,6 +283,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       _currentStep = GenerationStep.colorInput; // Go to color input step
     });
 
+    // Initialize color controllers
+    _initializeColorControllers(colorCount);
+
     // Update the Riverpod provider
     ref.read(selectedColorCountProvider.notifier).setColorCount(colorCount);
   }
@@ -273,7 +297,34 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       _selectedAssetSubtype = '';
       _selectedColorCount = null;
       _availableSubtypes = [];
+      _selectedColors = [];
+      _disposeColorControllers(); // Clean up controllers
     });
+  }
+
+  // Helper method to initialize color controllers
+  void _initializeColorControllers(int count) {
+    // Dispose existing controllers
+    _disposeColorControllers();
+
+    // Create new controllers
+    _colorControllers = List.generate(
+      count,
+      (index) => TextEditingController(),
+    );
+
+    // Set initial values if they exist
+    for (int i = 0; i < count && i < _selectedColors.length; i++) {
+      _colorControllers[i].text = _selectedColors[i];
+    }
+  }
+
+  // Helper method to dispose color controllers
+  void _disposeColorControllers() {
+    for (final controller in _colorControllers) {
+      controller.dispose();
+    }
+    _colorControllers.clear();
   }
 
   void _goBackToPromptInput() {
@@ -284,9 +335,80 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     });
   }
 
-  void _saveToLibrary() {
-    // TODO: Implement save to asset library
-    _showSuccess('Asset saved to library!');
+  Future<void> _saveToLibrary() async {
+    // Check if we have generated image data
+    if (_generatedImageData == null) {
+      _showError('No image data to save');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    try {
+      // Get the AssetService
+      final assetService = await ref.read(initAssetServiceProvider.future);
+
+      // Get current user ID
+      String userId;
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          userId = user.id;
+        } else {
+          // Fallback to a default user ID if not authenticated
+          userId = 'anonymous_user';
+        }
+      } catch (e) {
+        AppLogger.warning(
+          'Could not get authenticated user, using anonymous: $e',
+        );
+        userId = 'anonymous_user';
+      }
+
+      // Build the enhanced prompt that was used for generation
+      final prompt = _buildEnhancedPrompt();
+
+      // Create a new Asset object using the named constructor
+      final asset = AssetModel.create(
+        supabaseId: '', // Will be set by the service
+        userId: userId,
+        prompt: prompt,
+        imagePath: '', // Will be set by the service after upload
+        mimeType: 'image/png',
+        createdAt: DateTime.now(),
+        status: AssetStatus.generating,
+        isFavorite: false,
+        tags: [
+          _selectedAssetType,
+          _selectedAssetSubtype,
+        ].where((tag) => tag.isNotEmpty).toList(),
+      );
+
+      AppLogger.info('💾 Saving asset to library: $prompt');
+
+      // Save the asset using AssetService
+      final savedAsset = await assetService.saveAsset(
+        asset,
+        _generatedImageData!,
+      );
+
+      AppLogger.info('✅ Asset saved successfully: ${savedAsset.supabaseId}');
+
+      // Show success message
+      _showSuccess(
+        'Asset saved to library! You can find it in your collection.',
+      );
+    } catch (e) {
+      AppLogger.error('❌ Error saving asset: $e');
+      _showError('Failed to save asset: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
   }
 
   void _showError(String message) {
@@ -1349,21 +1471,29 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           _buildCondensedGenerationInfo(),
           const SizedBox(height: 24),
 
-          // Preview and Actions
+          // Preview and Actions - Different layout for mobile vs desktop
           Expanded(
-            child: Row(
-              children: [
-                // Preview Area
-                Expanded(flex: 2, child: _buildPreviewArea()),
-                const SizedBox(width: 24),
+            child: isLargeScreen
+                ? Row(
+                    children: [
+                      // Preview Area
+                      Expanded(flex: 2, child: _buildPreviewArea()),
+                      const SizedBox(width: 24),
 
-                // Action Panel
-                Container(
-                  width: isLargeScreen ? 300 : 200,
-                  child: _buildPreviewActions(),
-                ),
-              ],
-            ),
+                      // Action Panel - Side by side on large screens
+                      Expanded(flex: 1, child: _buildPreviewActions()),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // Preview Area - Full width on mobile
+                      Expanded(child: _buildPreviewArea()),
+                      const SizedBox(height: 24),
+
+                      // Action Panel - Below preview on mobile
+                      _buildPreviewActions(),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -1682,9 +1812,18 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _saveToLibrary,
-            icon: const Icon(Icons.save),
-            label: const Text('Save to Library'),
+            onPressed: _isSaving ? null : _saveToLibrary,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.save),
+            label: Text(_isSaving ? 'Saving...' : 'Save to Library'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGold,
               foregroundColor: AppColors.textOnGold,
@@ -2206,25 +2345,40 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // Color Suggestion Button
+                // Color Suggestion Button with loading state
                 TextButton.icon(
-                  onPressed: _generateColorInputSuggestion,
-                  icon: Icon(
-                    Icons.color_lens_outlined,
-                    color: AppColors.primaryGold,
-                    size: 18,
-                  ),
+                  onPressed: _isGenerating
+                      ? null
+                      : _generateColorInputSuggestion,
+                  icon: _isGenerating
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryGold,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          Icons.auto_awesome_outlined,
+                          color: AppColors.primaryGold,
+                          size: 18,
+                        ),
                   label: Text(
-                    'Suggest Colors',
+                    _isGenerating ? 'Generating...' : 'AI Suggest Colors',
                     style: TextStyle(
-                      color: AppColors.primaryGold,
+                      color: _isGenerating
+                          ? AppColors.textSecondary
+                          : AppColors.primaryGold,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.primaryGold.withValues(
-                      alpha: 0.1,
+                      alpha: _isGenerating ? 0.05 : 0.1,
                     ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -2387,9 +2541,13 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           const SizedBox(width: 16),
           Expanded(
             child: TextField(
+              controller: index < _colorControllers.length
+                  ? _colorControllers[index]
+                  : null,
               onChanged: (value) => _updateColor(index, value),
               decoration: InputDecoration(
-                hintText: 'e.g., Deep blue, Gold, Bright red...',
+                hintText:
+                    'e.g., Blue, #FF5733, RGB(255,87,51), CMYK(0,66,80,0)...',
                 hintStyle: TextStyle(
                   color: AppColors.textHint.withValues(alpha: 0.7),
                   fontSize: 14,
@@ -2641,7 +2799,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       hasGoldAccent: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           // Header with title and suggest button
           Row(
@@ -2658,18 +2816,33 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
                   ),
                 ),
               ),
-              // Random Suggest Button
+              // AI-Powered Suggest Button
               TextButton.icon(
-                onPressed: _generateRandomSuggestion,
-                icon: Icon(
-                  Icons.auto_awesome,
-                  color: AppColors.primaryGold,
-                  size: 18,
-                ),
+                onPressed: _isGeneratingSuggestion
+                    ? null
+                    : _generateRandomSuggestion,
+                icon: _isGeneratingSuggestion
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primaryGold,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.auto_awesome,
+                        color: AppColors.primaryGold,
+                        size: 18,
+                      ),
                 label: Text(
-                  'Suggest',
+                  _isGeneratingSuggestion ? 'AI Thinking...' : 'AI Suggest',
                   style: TextStyle(
-                    color: AppColors.primaryGold,
+                    color: _isGeneratingSuggestion
+                        ? AppColors.primaryGold.withValues(alpha: 0.6)
+                        : AppColors.primaryGold,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -2682,7 +2855,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: BorderSide(
-                      color: AppColors.primaryGold.withValues(alpha: 0.3),
+                      color: _isGeneratingSuggestion
+                          ? AppColors.primaryGold.withValues(alpha: 0.2)
+                          : AppColors.primaryGold.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -2695,12 +2870,12 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           // Enhanced Text Input with Strong Glassmorphism
           EnhancedInputContainer(
             hasFocus: _promptFocusNode.hasFocus,
-            minHeight: 140,
+            minHeight: 120,
             child: TextField(
               controller: _promptController,
               focusNode: _promptFocusNode,
-              maxLines: 6, // Fixed lines for better control
-              minLines: 4, // Minimum lines to show
+              maxLines: 5, // Reduced for better fit
+              minLines: 3, // Reduced minimum lines
               maxLength: AppConstants.maxPromptLength,
               enabled: !_isGenerating && isAiAvailable,
               style: const TextStyle(
@@ -3121,12 +3296,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
               child: _generatedImageData != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: Image.memory(
-                        _generatedImageData!,
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
+                      child: _buildSafeImage(_generatedImageData!),
                     )
                   : _buildPreviewPlaceholder(),
             ),
@@ -3218,8 +3388,51 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     );
   }
 
-  // Helper method to generate random suggestions based on selected asset type and subtype
-  void _generateRandomSuggestion() {
+  // Helper method to generate AI-powered suggestions based on selected asset type and user input
+  Future<void> _generateRandomSuggestion() async {
+    setState(() {
+      _isGeneratingSuggestion = true;
+    });
+
+    try {
+      AppLogger.info('🎨 Generating AI-powered prompt suggestion...');
+
+      // Get current user input if any
+      final currentInput = _promptController.text.trim();
+
+      // Use AI service to generate suggestions
+      final aiService = ref.read(aiServiceProvider);
+      final suggestions = await aiService.generatePromptSuggestions(
+        assetType: _selectedAssetType,
+        assetSubtype: _selectedAssetSubtype,
+        userInput: currentInput.isNotEmpty ? currentInput : null,
+      );
+
+      if (suggestions.isNotEmpty) {
+        final random = Random();
+        final suggestion = suggestions[random.nextInt(suggestions.length)];
+
+        setState(() {
+          _promptController.text = suggestion;
+        });
+
+        AppLogger.info('✅ Applied AI-generated suggestion');
+      } else {
+        AppLogger.warning('⚠️ No suggestions available, using fallback');
+        _generateFallbackSuggestion();
+      }
+    } catch (e) {
+      AppLogger.error('❌ Error generating AI suggestion: $e');
+      _generateFallbackSuggestion();
+    } finally {
+      setState(() {
+        _isGeneratingSuggestion = false;
+      });
+    }
+  }
+
+  // Fallback method for when AI suggestions fail
+  void _generateFallbackSuggestion() {
     List<String> suggestions = _getPromptSuggestions();
     if (suggestions.isNotEmpty) {
       final random = Random();
@@ -3363,59 +3576,152 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       _selectedColors = List.filled(selectedCount, '');
     });
 
+    // Initialize color controllers
+    _initializeColorControllers(selectedCount);
+
     // Update the Riverpod provider
     ref.read(selectedColorCountProvider.notifier).setColorCount(selectedCount);
 
-    // Show feedback with the selected count
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Auto-selected $selectedCount color${selectedCount > 1 ? 's' : ''} - perfect for your $_selectedAssetSubtype!',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppColors.primaryGold,
-        duration: const Duration(seconds: 2),
-      ),
+    // Immediately navigate to the next step without showing popup
+    // Check if colors are needed for this asset type
+    final needsColors = _needsColorInput(
+      _selectedAssetType,
+      _selectedAssetSubtype,
     );
 
-    // Auto-navigate to the next step after a brief delay
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted &&
-          _selectedAssetType == 'Logo' &&
-          _selectedAssetSubtype == 'Logo only') {
-        // For "Logo only", go directly to prompt input since colors are needed
-        setState(() {
-          _currentStep = GenerationStep.colorInput;
-        });
+    setState(() {
+      if (needsColors) {
+        _currentStep = GenerationStep.colorInput;
       } else {
-        // For other types, go to prompt input
-        setState(() {
-          _currentStep = GenerationStep.promptInput;
-        });
+        _currentStep = GenerationStep.promptInput;
       }
     });
   }
 
-  // Helper method to generate color input suggestions
-  void _generateColorInputSuggestion() {
+  // Helper method to generate color input suggestions using AI
+  Future<void> _generateColorInputSuggestion() async {
+    try {
+      AppLogger.info('🎨 Starting AI color suggestion generation...');
+
+      // Show loading state while generating
+      setState(() {
+        _isGenerating = true;
+      });
+
+      // Create context for AI suggestion based on asset type and subtype
+      final context = '$_selectedAssetType $_selectedAssetSubtype design';
+      AppLogger.info('🎯 Context for AI: $context');
+      AppLogger.info(
+        '📊 Color count: $_selectedColorCount, Controllers: ${_colorControllers.length}',
+      );
+
+      // Generate AI-powered color palette
+      final aiService = ref.read(aiServiceProvider);
+      final colorPalette = await aiService.generateColorPalette(context);
+
+      AppLogger.info('🔄 AI returned ${colorPalette.length} colors');
+      for (int i = 0; i < colorPalette.length; i++) {
+        AppLogger.info('Color $i: ${colorPalette[i]}');
+      }
+
+      if (colorPalette.isNotEmpty && mounted) {
+        // Apply AI suggestions to color inputs
+        setState(() {
+          for (
+            int i = 0;
+            i < colorPalette.length && i < _selectedColors.length;
+            i++
+          ) {
+            final colorData = colorPalette[i];
+            AppLogger.info('Processing color $i: $colorData');
+
+            // Prioritize actual color codes over generic names
+            String colorValue;
+
+            // Check if we have actual color data, prioritize in this order:
+            // 1. Hex (most common and readable)
+            // 2. RGB
+            // 3. Color name (only if it's not generic)
+            // 4. CMYK
+            if (colorData['hex'] != null &&
+                colorData['hex'].toString().contains('#')) {
+              colorValue = colorData['hex'];
+            } else if (colorData['rgb'] != null &&
+                colorData['rgb'].toString().contains('RGB')) {
+              colorValue = colorData['rgb'];
+            } else if (colorData['name'] != null &&
+                !colorData['name'].toString().toLowerCase().contains(
+                  'generated',
+                ) &&
+                !colorData['name'].toString().toLowerCase().contains(
+                  'color ${i + 1}',
+                )) {
+              colorValue = colorData['name'];
+            } else if (colorData['cmyk'] != null &&
+                colorData['cmyk'].toString().contains('CMYK')) {
+              colorValue = colorData['cmyk'];
+            } else {
+              // Last resort fallback
+              colorValue = colorData['name'] ?? 'Color ${i + 1}';
+            }
+
+            AppLogger.info('Final color value for $i: $colorValue');
+
+            _selectedColors[i] = colorValue;
+
+            // Update the controller to show the value in the TextField
+            if (i < _colorControllers.length) {
+              _colorControllers[i].text = colorValue;
+              AppLogger.info(
+                'Updated controller $i with: ${_colorControllers[i].text}',
+              );
+            } else {
+              AppLogger.warning('No controller available for index $i');
+            }
+          }
+          _isGenerating = false;
+        });
+
+        AppLogger.info('✅ Applied AI-generated color suggestions');
+        AppLogger.info('Final _selectedColors: $_selectedColors');
+      } else {
+        AppLogger.warning('No colors returned from AI, using fallback');
+        // Fallback to curated suggestions if AI fails
+        _applyFallbackColorSuggestions();
+      }
+    } catch (e) {
+      AppLogger.error('❌ Error generating AI color suggestions: $e');
+      // Fallback to curated suggestions
+      _applyFallbackColorSuggestions();
+    }
+  }
+
+  // Fallback method with curated color combinations (no popup)
+  void _applyFallbackColorSuggestions() {
+    AppLogger.info('🔄 Applying fallback color suggestions...');
+
     final colorCombinations = [
-      ['Deep navy blue', 'Gold', 'White'],
-      ['Forest green', 'Cream', 'Brown'],
-      ['Royal purple', 'Silver', 'Black'],
-      ['Crimson red', 'Charcoal gray'],
-      ['Teal', 'Orange', 'White', 'Gray'],
-      ['Burgundy', 'Gold'],
-      ['Midnight blue', 'Bright yellow'],
-      ['Emerald green', 'Black', 'White'],
-      ['Coral pink', 'Navy blue', 'Gold'],
-      ['Copper', 'Dark green', 'Cream'],
+      ['#2E86AB', 'RGB(46, 134, 171)', 'Deep navy blue'],
+      ['#4A7C59', 'CMYK(39, 0, 28, 51)', 'Forest green'],
+      ['#6A4C93', 'RGB(106, 76, 147)', 'Royal purple'],
+      ['#DC143C', 'RGB(220, 20, 60)', 'Crimson red'],
+      ['#008080', 'CMYK(100, 0, 0, 50)', 'Teal blue'],
+      ['#800020', 'RGB(128, 0, 32)', 'Burgundy wine'],
+      ['#191970', 'RGB(25, 25, 112)', 'Midnight blue'],
+      ['#50C878', 'CMYK(61, 0, 39, 22)', 'Emerald green'],
+      ['#FF7F7F', 'RGB(255, 127, 127)', 'Coral pink'],
+      ['#B87333', 'RGB(184, 115, 51)', 'Copper bronze'],
     ];
 
     final random = Random();
     final suggestion =
         colorCombinations[random.nextInt(colorCombinations.length)];
 
-    // Fill in the color inputs with suggestions
+    AppLogger.info('📋 Selected fallback combination: $suggestion');
+    AppLogger.info(
+      '🎯 Available controllers: ${_colorControllers.length}, Colors needed: ${_selectedColors.length}',
+    );
+
     setState(() {
       for (
         int i = 0;
@@ -3423,20 +3729,23 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         i++
       ) {
         _selectedColors[i] = suggestion[i];
+        AppLogger.info('Setting color $i: ${suggestion[i]}');
+
+        // Update the controller to show the value in the TextField
+        if (i < _colorControllers.length) {
+          _colorControllers[i].text = suggestion[i];
+          AppLogger.info(
+            'Updated controller $i with: ${_colorControllers[i].text}',
+          );
+        } else {
+          AppLogger.warning('No controller available for fallback color $i');
+        }
       }
+      _isGenerating = false;
     });
 
-    // Show feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Color suggestion applied! You can edit any color as needed.',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppColors.primaryGold,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    AppLogger.info('✅ Applied fallback color suggestions');
+    AppLogger.info('Final fallback _selectedColors: $_selectedColors');
   }
 
   // Get curated prompt suggestions based on asset type and subtype
@@ -3509,5 +3818,290 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           'A professional-quality asset with polished finishing touches',
         ];
     }
+  }
+
+  /// Validate image data to prevent decompression errors
+  bool _isValidImageData(Uint8List imageData) {
+    try {
+      // Check minimum size
+      if (imageData.length < 8) {
+        AppLogger.warning('⚠️ Image data too small: ${imageData.length} bytes');
+        return false;
+      }
+
+      // Check for PNG signature (most common for AI generated images)
+      final pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+      bool isPng = true;
+      for (int i = 0; i < 8 && i < imageData.length; i++) {
+        if (imageData[i] != pngSignature[i]) {
+          isPng = false;
+          break;
+        }
+      }
+
+      // Check for JPEG signature (FF D8 FF)
+      bool isJpeg =
+          imageData.length >= 3 &&
+          imageData[0] == 0xFF &&
+          imageData[1] == 0xD8 &&
+          imageData[2] == 0xFF;
+
+      // Check for WebP signature (RIFF...WEBP)
+      bool isWebP =
+          imageData.length >= 12 &&
+          imageData[0] == 0x52 &&
+          imageData[1] == 0x49 && // "RI"
+          imageData[2] == 0x46 &&
+          imageData[3] == 0x46 && // "FF"
+          imageData[8] == 0x57 &&
+          imageData[9] == 0x45 && // "WE"
+          imageData[10] == 0x42 &&
+          imageData[11] == 0x50; // "BP"
+
+      if (isPng) {
+        AppLogger.info(
+          '✅ Valid PNG image data detected (${imageData.length} bytes)',
+        );
+        return true;
+      } else if (isJpeg) {
+        AppLogger.info(
+          '✅ Valid JPEG image data detected (${imageData.length} bytes)',
+        );
+        return true;
+      } else if (isWebP) {
+        AppLogger.info(
+          '✅ Valid WebP image data detected (${imageData.length} bytes)',
+        );
+        return true;
+      } else {
+        AppLogger.warning(
+          '⚠️ Unknown image format or invalid signature (${imageData.length} bytes)',
+        );
+        // Log first few bytes for debugging
+        String hexBytes = imageData
+            .take(16)
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join(' ');
+        AppLogger.warning('First 16 bytes: $hexBytes');
+
+        // Log last few bytes too
+        String lastHexBytes = imageData
+            .skip(imageData.length > 16 ? imageData.length - 16 : 0)
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join(' ');
+        AppLogger.warning('Last 16 bytes: $lastHexBytes');
+
+        return false;
+      }
+    } catch (e) {
+      AppLogger.error('❌ Error validating image data: $e');
+      return false;
+    }
+  }
+
+  /// Build a safe image widget with error handling for decompression issues
+  Widget _buildSafeImage(Uint8List imageData) {
+    // For testing purposes, if we're in mock mode and image is small, show a placeholder
+    final isLikelyMockImage =
+        imageData.length < 100; // Mock images are typically very small
+
+    if (isLikelyMockImage) {
+      AppLogger.info('🎭 Detected mock image, showing placeholder instead');
+      return _buildMockImagePlaceholder();
+    }
+
+    // Pre-validate image data before attempting to create Image.memory
+    if (!_isValidImageData(imageData)) {
+      AppLogger.error('❌ Image data validation failed - showing fallback UI');
+      return _buildImageErrorFallback();
+    }
+
+    // Use FutureBuilder to test image decoding before display
+    return FutureBuilder<bool>(
+      future: _testImageDecoding(imageData),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.backgroundSecondary,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primaryGold,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!) {
+          AppLogger.error('❌ Image decoding test failed');
+          return _buildImageErrorFallback();
+        }
+
+        // Image decoding test passed, now try to display it
+        return Image.memory(
+          imageData,
+          fit: BoxFit.contain,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            AppLogger.error('❌ Image.memory display failed: $error');
+            return _buildImageErrorFallback();
+          },
+        );
+      },
+    );
+  }
+
+  /// Build a placeholder for mock images
+  Widget _buildMockImagePlaceholder() {
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(minHeight: 120, maxHeight: 220),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primaryGold.withValues(alpha: 0.1),
+            AppColors.backgroundSecondary.withValues(alpha: 0.3),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.primaryGold.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: SingleChildScrollView(
+        physics: BouncingScrollPhysics(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.image,
+              size: 48,
+              color: AppColors.primaryGold.withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Mock Asset Generated',
+              style: TextStyle(
+                color: AppColors.primaryGold,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Placeholder for AI-generated asset',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '✨ AI Generated ✨',
+                style: TextStyle(
+                  color: AppColors.primaryGold,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Test if image data can be decoded by Flutter
+  Future<bool> _testImageDecoding(Uint8List imageData) async {
+    try {
+      // Use Flutter's decodeImageFromList to test decoding
+      final codec = await ui.instantiateImageCodec(imageData);
+      final frame = await codec.getNextFrame();
+
+      AppLogger.info(
+        '✅ Image decoding test passed: ${frame.image.width}x${frame.image.height}',
+      );
+      frame.image.dispose();
+      codec.dispose();
+
+      return true;
+    } catch (e) {
+      AppLogger.error('❌ Image decoding test failed: $e');
+      return false;
+    }
+  }
+
+  /// Build the fallback UI for image errors
+  Widget _buildImageErrorFallback() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.error.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.broken_image_outlined,
+            size: 64,
+            color: AppColors.error.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Image Preview Error',
+            style: TextStyle(
+              color: AppColors.error,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Generated image could not be displayed.\nTry generating again.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {
+              setState(() {
+                _generatedImageData = null;
+                _currentStep = GenerationStep.promptInput;
+              });
+            },
+            icon: Icon(Icons.refresh, size: 18),
+            label: Text('Try Again'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGold,
+              foregroundColor: AppColors.backgroundPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

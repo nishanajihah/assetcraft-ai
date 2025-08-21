@@ -94,12 +94,16 @@ class Environment {
   // Gemini AI Model Configuration
   static String get geminiTextModel =>
       dotenv.get('GEMINI_TEXT_MODEL', fallback: 'gemini-1.5-flash');
-  static String get geminiImageModel => dotenv.get(
-    'GEMINI_IMAGE_MODEL',
-    fallback: 'gemini-2.0-flash-preview-image-generation',
-  );
   static String get geminiSuggestionsModel =>
       dotenv.get('GEMINI_SUGGESTIONS_MODEL', fallback: 'gemini-1.5-flash');
+
+  // Google Cloud Imagen Configuration
+  static String get googleCloudProjectId =>
+      dotenv.get('GOOGLE_CLOUD_PROJECT_ID', fallback: '');
+  static String get googleCloudApiKey =>
+      dotenv.get('GOOGLE_CLOUD_API_KEY', fallback: '');
+  static String get imagenModel =>
+      dotenv.get('IMAGEN_MODEL', fallback: 'imagen-3.0-generate-001');
 
   // Validation methods
   static bool get hasSupabaseConfig =>
@@ -107,6 +111,8 @@ class Environment {
   static bool get hasRevenueCatConfig => revenueCatApiKey.isNotEmpty;
   static bool get hasOneSignalConfig => oneSignalAppId.isNotEmpty;
   static bool get hasGeminiConfig => geminiApiKey.isNotEmpty;
+  static bool get hasGoogleCloudConfig =>
+      googleCloudProjectId.isNotEmpty && googleCloudApiKey.isNotEmpty;
   static bool get hasPaddleConfig =>
       paddleVendorId.isNotEmpty && paddleApiKey.isNotEmpty;
 
@@ -146,6 +152,7 @@ class Environment {
       AppLogger.debug('  RevenueCat: ${hasRevenueCatConfig ? "✅" : "❌"}');
       AppLogger.debug('  OneSignal: ${hasOneSignalConfig ? "✅" : "❌"}');
       AppLogger.debug('  Gemini: ${hasGeminiConfig ? "✅" : "❌"}');
+      AppLogger.debug('  Google Cloud: ${hasGoogleCloudConfig ? "✅" : "❌"}');
       AppLogger.debug('  Paddle: ${hasPaddleConfig ? "✅" : "❌"}');
       AppLogger.debug('  Mock AI: $enableMockAI');
       AppLogger.debug('  Push Notifications: $enablePushNotifications');

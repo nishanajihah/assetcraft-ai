@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -9,52 +8,31 @@ import '../utils/app_logger.dart';
 
 part 'ai_service.g.dart';
 
-/// AI Service for generating assets using Google Gemini
+/// AI Service for generating assets using Google Gemini and Google Cloud Imagen
 ///
-/// This service handles API calls to Google Gemini for AI-powered asset generation.
-/// It provides methods to generate images from text prompts and handles API key
-/// security through environment variables.
+/// This service handles API calls to Google Gemini for text generation and suggestions,
+/// and Google Cloud Imagen for image generation. It provides methods to generate images
+/// from text prompts and handles API key security through environment variables.
 class AiService {
-  late final GenerativeModel _textModel;
-  late final GenerativeModel _imageModel;
   late final GenerativeModel _suggestionsModel;
-  late final String _apiKey;
+  late final String _geminiApiKey;
+  late final String _googleCloudApiKey;
+  late final String _projectId;
 
-  /// Initialize the AI service with the Gemini API key
+  /// Initialize the AI service with the API keys
   AiService() {
-    _apiKey = Environment.geminiApiKey;
+    _geminiApiKey = Environment.geminiApiKey;
+    _googleCloudApiKey = Environment.googleCloudApiKey;
+    _projectId = Environment.googleCloudProjectId;
 
-    if (_apiKey.isEmpty || _apiKey.contains('placeholder')) {
+    if (_geminiApiKey.isEmpty || _geminiApiKey.contains('placeholder')) {
       AppLogger.warning('⚠️ Gemini API key not configured');
       throw Exception('Gemini API key is required for AI service');
     }
 
-    // Initialize different Gemini models for different purposes
-    _textModel = GenerativeModel(
-      model: Environment.geminiTextModel,
-      apiKey: _apiKey,
-      generationConfig: GenerationConfig(
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.8,
-        maxOutputTokens: 2048,
-      ),
-    );
-
-    _imageModel = GenerativeModel(
-      model: Environment.geminiImageModel,
-      apiKey: _apiKey,
-      generationConfig: GenerationConfig(
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.8,
-        maxOutputTokens: 2048,
-      ),
-    );
-
     _suggestionsModel = GenerativeModel(
       model: Environment.geminiSuggestionsModel,
-      apiKey: _apiKey,
+      apiKey: _geminiApiKey,
       generationConfig: GenerationConfig(
         temperature: 0.8,
         topK: 40,
@@ -64,15 +42,19 @@ class AiService {
     );
 
     AppLogger.info('✅ AI Service initialized with models:');
-    AppLogger.info('  Text: ${Environment.geminiTextModel}');
-    AppLogger.info('  Image: ${Environment.geminiImageModel}');
     AppLogger.info('  Suggestions: ${Environment.geminiSuggestionsModel}');
+    AppLogger.info(
+      '  Image Generation: Google Cloud Imagen ${Environment.imagenModel}',
+    );
+    AppLogger.info(
+      '  Google Cloud configured: ${Environment.hasGoogleCloudConfig}',
+    );
   }
 
-  /// Generate an asset from a text prompt
+  /// Generate an asset from a text prompt using Google Cloud Imagen
   ///
   /// Takes a [prompt] string and returns generated image data as Uint8List.
-  /// This method uses the image generation model to create images directly.
+  /// This method uses Google Cloud Imagen API to create images directly.
   ///
   /// Returns null if generation fails or if the response doesn't contain image data.
   Future<Uint8List?> generateAssetFromPrompt(String prompt) async {
@@ -86,65 +68,19 @@ class AiService {
         return _createMockImage();
       }
 
-      // Create the enhanced prompt for better asset generation
-      final enhancedPrompt = _enhancePromptForAssetGeneration(prompt);
-      AppLogger.debug('Enhanced prompt: $enhancedPrompt');
-
-      AppLogger.info('🚀 Calling Gemini 2.0 image generation model...');
-
-      try {
-        // Try to use the Gemini image generation model directly
-        final response = await _imageModel.generateContent([
-          Content.text(enhancedPrompt),
-        ]);
-
-        AppLogger.info('✅ Received response from Gemini image model');
-
-        // Check if response contains text that might include image references
-        if (response.text?.isNotEmpty == true) {
-          final responseText = response.text!;
-
-          // Check if response contains base64 image data
-          if (responseText.contains('data:image/') ||
-              responseText.contains('base64')) {
-            final base64Match = RegExp(
-              r'data:image/[^;]+;base64,([A-Za-z0-9+/=]+)',
-            ).firstMatch(responseText);
-
-            if (base64Match != null) {
-              final base64Data = base64Match.group(1)!;
-              final imageBytes = base64Decode(base64Data);
-              AppLogger.info(
-                '✅ Successfully decoded base64 image from response',
-              );
-              return Uint8List.fromList(imageBytes);
-            }
-          }
-
-          AppLogger.debug(
-            'Response text: ${responseText.substring(0, math.min(200, responseText.length))}...',
-          );
-        }
-
-        // If we reach here, no image data was found in the response
-        AppLogger.warning('⚠️ Response received but no image data found');
-
-        // Fall back to detailed prompt generation for external services
-        return await _generateImageViaTextPrompt(enhancedPrompt);
-      } catch (modelError) {
-        AppLogger.error('❌ Gemini image model error: $modelError');
-
-        // If the model-specific error is about modalities, try alternative approach
-        if (modelError.toString().contains('modalities') ||
-            modelError.toString().contains('TEXT, IMAGE')) {
-          AppLogger.info(
-            '🔄 Trying alternative approach for image generation...',
-          );
-          return await _generateImageViaTextPrompt(enhancedPrompt);
-        }
-
-        rethrow;
+      // Check if Google Cloud is configured
+      if (!Environment.hasGoogleCloudConfig) {
+        AppLogger.warning(
+          '⚠️ Google Cloud Imagen not configured, using mock image',
+        );
+        AppLogger.info(
+          '💡 Please configure GOOGLE_CLOUD_PROJECT_ID and GOOGLE_CLOUD_API_KEY in .env file',
+        );
+        return _createMockImage();
       }
+
+      // Generate image using Google Cloud Imagen API
+      return await _generateImageWithImagen(prompt);
     } catch (e) {
       AppLogger.error('❌ Error generating asset: $e');
 
@@ -159,68 +95,70 @@ class AiService {
     }
   }
 
-  /// Alternative method to generate images via text prompts when direct image generation fails
-  Future<Uint8List?> _generateImageViaTextPrompt(String prompt) async {
+  /// Generate image using Google Cloud Imagen API
+  Future<Uint8List?> _generateImageWithImagen(String prompt) async {
     try {
-      AppLogger.info(
-        '🔄 Generating detailed prompt for external image services...',
+      AppLogger.info('🚀 Calling Google Cloud Imagen API...');
+
+      // Create the enhanced prompt for better asset generation
+      final enhancedPrompt = _enhancePromptForAssetGeneration(prompt);
+      AppLogger.debug('Enhanced prompt: $enhancedPrompt');
+
+      // Prepare the Imagen API request
+      final requestBody = {
+        'instances': [
+          {'prompt': enhancedPrompt},
+        ],
+        'parameters': {
+          'guidance_scale': 15.0, // Higher values follow prompt more closely
+          'number_of_images_in_batch': 1,
+          'add_watermark': false,
+          'safety_filter_level': 'block_few',
+          'person_generation': 'allow_adult',
+        },
+      };
+
+      // Make the API call to Google Cloud Imagen
+      final response = await http.post(
+        Uri.parse(
+          'https://us-central1-aiplatform.googleapis.com/v1/projects/$_projectId/locations/us-central1/publishers/google/models/${Environment.imagenModel}:predict',
+        ),
+        headers: {
+          'Authorization': 'Bearer $_googleCloudApiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(requestBody),
       );
 
-      // Generate a detailed description for the image
-      final detailedPrompt = await _generateDetailedImagePrompt(prompt);
-      AppLogger.info('📝 Generated detailed prompt: $detailedPrompt');
+      AppLogger.debug('Imagen API response status: ${response.statusCode}');
 
-      AppLogger.warning(
-        '⚠️ Gemini 2.0 image generation API needs specific configuration',
-      );
-      AppLogger.info(
-        '💡 Generated optimized prompt for external image generation services',
-      );
-      AppLogger.info(
-        '🎯 Ready for DALL-E, Stable Diffusion, or Midjourney APIs',
-      );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        AppLogger.info('✅ Received response from Imagen API');
 
-      // For now, create a placeholder that indicates the prompt is ready
-      // In production, this would be sent to an external image generation API
-      AppLogger.info(
-        '🎨 Creating informational placeholder (replace with external API call)',
-      );
-      return _createMockImage();
-    } catch (e) {
-      AppLogger.error('❌ Error in alternative image generation: $e');
-      return null;
-    }
-  }
+        // Extract image data from response
+        if (responseData['predictions'] != null &&
+            responseData['predictions'].isNotEmpty) {
+          final prediction = responseData['predictions'][0];
 
-  /// Generate a detailed image prompt using the text model
-  Future<String> _generateDetailedImagePrompt(String basePrompt) async {
-    try {
-      final detailPrompt =
-          '''
-Create a very detailed, specific prompt for AI image generation based on this request: "$basePrompt"
+          if (prediction['bytesBase64Encoded'] != null) {
+            final base64Data = prediction['bytesBase64Encoded'];
+            final imageBytes = base64Decode(base64Data);
+            AppLogger.info('✅ Successfully decoded image from Imagen API');
+            return Uint8List.fromList(imageBytes);
+          }
+        }
 
-The detailed prompt should include:
-- Specific visual elements and composition
-- Art style and aesthetic direction
-- Color scheme and lighting
-- Technical quality specifications
-- Professional design elements
-
-Return only the detailed prompt text, ready to use for image generation.
-''';
-
-      final response = await _textModel.generateContent([
-        Content.text(detailPrompt),
-      ]);
-
-      if (response.text?.isNotEmpty == true) {
-        return response.text!.trim();
+        AppLogger.warning('⚠️ No image data found in Imagen response');
+        return null;
+      } else {
+        AppLogger.error('❌ Imagen API error: ${response.statusCode}');
+        AppLogger.error('Response body: ${response.body}');
+        return null;
       }
-
-      return basePrompt; // Fallback to original prompt
     } catch (e) {
-      AppLogger.warning('⚠️ Error generating detailed prompt: $e');
-      return basePrompt;
+      AppLogger.error('❌ Error calling Imagen API: $e');
+      return null;
     }
   }
 
@@ -249,14 +187,82 @@ Output the generated image directly.
 
   /// Create a mock image for testing
   Uint8List _createMockImage() {
-    // Create a simple 100x100 colored square as base64 PNG
-    // This is a valid PNG that can be displayed with Image.memory()
-    const base64Image =
-        'iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAIFSURBVHic7doxS8NAGIDhNwmkQ6c6dHJw6OTg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8A==';
+    try {
+      // Use a known working PNG base64 string (1x1 pixel black PNG)
+      const validPngBase64 =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA+p6k3wAAAABJRU5ErkJggg==';
 
-    // Decode base64 to bytes
-    final bytes = base64Decode(base64Image);
-    return Uint8List.fromList(bytes);
+      final bytes = base64Decode(validPngBase64);
+      final imageData = Uint8List.fromList(bytes);
+
+      // Validate the created image
+      if (_isValidImageData(imageData)) {
+        AppLogger.info('✅ Created valid mock image (${bytes.length} bytes)');
+        AppLogger.debug(
+          'First 16 bytes: ${imageData.take(16).map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' ')}',
+        );
+        return imageData;
+      } else {
+        AppLogger.warning(
+          '⚠️ Mock image validation failed, using manual fallback',
+        );
+      }
+    } catch (e) {
+      AppLogger.error('❌ Error creating mock image: $e');
+    }
+
+    // Create minimal PNG manually as fallback
+    final List<int> minimalPng = [
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+      0x00, 0x00, 0x00, 0x0D, // IHDR length
+      0x49, 0x48, 0x44, 0x52, // IHDR
+      0x00, 0x00, 0x00, 0x01, // width = 1
+      0x00, 0x00, 0x00, 0x01, // height = 1
+      0x08,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // bit depth, color type, compression, filter, interlace
+      0x37, 0x6E, 0xF9, 0x24, // IHDR CRC
+      0x00, 0x00, 0x00, 0x0A, // IDAT length
+      0x49, 0x44, 0x41, 0x54, // IDAT
+      0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, // compressed data
+      0xE2, 0x21, 0xBC, 0x33, // IDAT CRC
+      0x00, 0x00, 0x00, 0x00, // IEND length
+      0x49, 0x45, 0x4E, 0x44, // IEND
+      0xAE, 0x42, 0x60, 0x82, // IEND CRC
+    ];
+
+    AppLogger.info(
+      '✅ Created fallback PNG manually (${minimalPng.length} bytes)',
+    );
+    return Uint8List.fromList(minimalPng);
+  }
+
+  /// Validate image data to prevent decompression errors
+  bool _isValidImageData(Uint8List imageData) {
+    try {
+      // Check minimum size (PNG header is at least 8 bytes)
+      if (imageData.length < 8) {
+        AppLogger.warning('⚠️ Image data too small: ${imageData.length} bytes');
+        return false;
+      }
+
+      // Check PNG signature (first 8 bytes should be PNG signature)
+      final pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+      for (int i = 0; i < 8; i++) {
+        if (imageData[i] != pngSignature[i]) {
+          AppLogger.warning('⚠️ Invalid PNG signature');
+          return false;
+        }
+      }
+
+      AppLogger.info('✅ Image data validation passed');
+      return true;
+    } catch (e) {
+      AppLogger.error('❌ Error validating image data: $e');
+      return false;
+    }
   }
 
   /// Alternative method using HTTP directly for custom API endpoints
@@ -272,7 +278,7 @@ Output the generated image directly.
         Uri.parse('https://api.example-image-generator.com/v1/generate'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer $_geminiApiKey',
         },
         body: jsonEncode({
           'prompt': prompt,
@@ -417,6 +423,90 @@ You are an expert AI prompt creator. I need three unique, creative, and professi
       return suggestions;
     } catch (e) {
       AppLogger.error('❌ Error getting expert suggestions: $e');
+      return [];
+    }
+  }
+
+  /// Generate AI-powered prompt suggestions based on asset type and user input
+  ///
+  /// This method creates personalized prompt suggestions that take into account
+  /// the selected asset type, subtype, and any existing user input to generate
+  /// creative and relevant suggestions for image generation.
+  Future<List<String>> generatePromptSuggestions({
+    required String assetType,
+    String? assetSubtype,
+    String? userInput,
+  }) async {
+    try {
+      AppLogger.info('🎨 Generating AI prompt suggestions for $assetType');
+
+      String suggestionPrompt;
+      if (userInput != null && userInput.isNotEmpty) {
+        suggestionPrompt =
+            '''
+You are an expert AI prompt creator. The user wants to create a $assetType and has started with this idea: "$userInput"
+
+Please enhance and expand this into 3 different creative, professional prompts that would work well for AI image generation. Each prompt should:
+- Build upon the user's existing idea
+- Be specific and detailed for better AI image generation
+- Include relevant style, mood, and technical details
+- Be optimized for 2D digital art creation
+- Be professional and suitable for commercial use
+
+Format as a simple list with each suggestion on a new line.
+''';
+      } else {
+        suggestionPrompt =
+            '''
+You are an expert AI prompt creator. The user wants to create a $assetType. Please provide 3 unique, creative, and professional prompt suggestions that would work well for AI image generation.
+
+Each prompt should:
+- Be specific and detailed for better AI image generation
+- Include relevant style, mood, and technical details
+- Be optimized for 2D digital art creation
+- Be professional and suitable for commercial use
+- Be creative and inspiring
+
+Format as a simple list with each suggestion on a new line.
+''';
+      }
+
+      final response = await _suggestionsModel.generateContent([
+        Content.text(suggestionPrompt),
+      ]);
+
+      if (response.text == null || response.text!.isEmpty) {
+        AppLogger.warning('⚠️ No prompt suggestions received from AI');
+        return [];
+      }
+
+      // Parse the response text into individual suggestions
+      final suggestions = response.text!
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .map((line) {
+            // Remove bullet points, numbers, and other formatting
+            String cleaned = line;
+            if (line.startsWith('•') ||
+                line.startsWith('-') ||
+                line.startsWith('*')) {
+              cleaned = line.substring(1).trim();
+            }
+            // Remove numbered lists (1., 2., etc.)
+            if (RegExp(r'^\d+\.\s*').hasMatch(cleaned)) {
+              cleaned = cleaned.replaceFirst(RegExp(r'^\d+\.\s*'), '');
+            }
+            return cleaned;
+          })
+          .where((line) => line.isNotEmpty)
+          .take(3)
+          .toList();
+
+      AppLogger.info('✅ Generated ${suggestions.length} AI prompt suggestions');
+      return suggestions;
+    } catch (e) {
+      AppLogger.error('❌ Error generating prompt suggestions: $e');
       return [];
     }
   }
@@ -593,7 +683,7 @@ Format as JSON:
 
   /// Check if the AI service is properly configured
   bool get isConfigured =>
-      _apiKey.isNotEmpty && !_apiKey.contains('placeholder');
+      _geminiApiKey.isNotEmpty && !_geminiApiKey.contains('placeholder');
 
   /// Get the current model information
   String get modelInfo => 'gemini-1.5-flash';
