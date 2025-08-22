@@ -7,14 +7,22 @@ import '../../features/monetization/presentation/credits_screen.dart';
 
 /// Main app shell with bottom navigation
 class AppShell extends ConsumerStatefulWidget {
-  const AppShell({super.key});
+  final int initialIndex;
+  
+  const AppShell({super.key, this.initialIndex = 0});
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+  
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _screens = [
     const AIGenerationScreen(),

@@ -1,7 +1,13 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+
+// Environment configuration
+import 'core/config/environment.dart';
 
 // Core imports
 import 'core/theme/app_theme.dart';
@@ -16,7 +22,8 @@ import 'shared/widgets/app_initializer.dart';
 /// 1. Flutter framework essentials
 /// 2. Riverpod state management
 /// 3. App theme with custom color palette
-/// 4. Defers environment and service initialization to AppInitializer
+/// 4. Third-party services (RevenueCat, OneSignal)
+/// 5. Defers environment and service initialization to AppInitializer
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,9 +33,59 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  
+  // Initialize third-party services
+  await initializeServices();
 
   // Run the app with Riverpod
   runApp(const ProviderScope(child: AssetCraftApp()));
+}
+
+/// Initialize third-party services for monetization and engagement
+/// 
+/// This method sets up:
+/// 1. OneSignal for push notifications
+/// 2. RevenueCat for in-app purchases and subscriptions
+Future<void> initializeServices() async {
+  try {
+    // Initialize environment first to access configuration values
+    await Environment.initialize();
+    
+    // Initialize OneSignal if configuration is available
+    if (Environment.hasOneSignalConfig) {
+      debugPrint('🔔 Initializing OneSignal...');
+      OneSignal.initialize(Environment.oneSignalAppId);
+      
+      // Request push notification permissions
+      await OneSignal.Notifications.requestPermission(true);
+      debugPrint('✅ OneSignal initialized successfully');
+    } else {
+      debugPrint('⚠️ OneSignal configuration missing, skipping initialization');
+    }
+    
+    // Initialize RevenueCat if configuration is available
+    if (Environment.hasRevenueCatConfig) {
+      debugPrint('💳 Initializing RevenueCat...');
+      // Set debug log level for development
+      await Purchases.setLogLevel(LogLevel.debug);
+      
+      // Configure with platform-specific API keys
+      if (Platform.isAndroid || Platform.isIOS) {
+        await Purchases.configure(
+          PurchasesConfiguration(Environment.revenueCatApiKey),
+        );
+        debugPrint('✅ RevenueCat initialized successfully');
+      } else {
+        debugPrint('⚠️ RevenueCat not supported on this platform');
+      }
+    } else {
+      debugPrint('⚠️ RevenueCat configuration missing, skipping initialization');
+    }
+    
+    debugPrint('✅ Third-party services initialization complete');
+  } catch (e) {
+    debugPrint('❌ Error initializing services: $e');
+  }
 }
 
 /// Main application widget
