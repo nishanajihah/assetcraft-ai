@@ -69,14 +69,30 @@ Future<void> initializeServices() async {
       // Set debug log level for development
       await Purchases.setLogLevel(LogLevel.debug);
       
-      // Configure with platform-specific API keys
-      if (Platform.isAndroid || Platform.isIOS) {
-        await Purchases.configure(
-          PurchasesConfiguration(Environment.revenueCatApiKey),
-        );
-        debugPrint('✅ RevenueCat initialized successfully');
+      // Get platform-specific API keys
+      final String rcAndroidKey = const String.fromEnvironment('REVENUECAT_ANDROID_KEY', defaultValue: '');
+      // The iOS key is optional for now
+      final String rcIosKey = const String.fromEnvironment('REVENUECAT_IOS_KEY', defaultValue: '');
+      
+      // Determine which API key to use based on platform
+      String rcApiKey = '';
+      if (Platform.isAndroid) {
+        rcApiKey = rcAndroidKey.isNotEmpty ? rcAndroidKey : Environment.revenueCatApiKey;
+      } else if (Platform.isIOS) {
+        rcApiKey = rcIosKey;
+        // TODO(developer): Add your iOS RevenueCat key here once available.
+        // A valid key is required for in-app purchases on iOS.
+        if (rcApiKey.isEmpty) {
+          debugPrint('⚠️ iOS RevenueCat key not available yet');
+        }
+      }
+      
+      // Configure RevenueCat if we have a valid API key
+      if (rcApiKey.isNotEmpty) {
+        await Purchases.configure(PurchasesConfiguration(rcApiKey));
+        debugPrint('✅ RevenueCat initialized successfully for ${Platform.isAndroid ? "Android" : "iOS"}');
       } else {
-        debugPrint('⚠️ RevenueCat not supported on this platform');
+        debugPrint('⚠️ RevenueCat not configured - missing API key for current platform');
       }
     } else {
       debugPrint('⚠️ RevenueCat configuration missing, skipping initialization');
