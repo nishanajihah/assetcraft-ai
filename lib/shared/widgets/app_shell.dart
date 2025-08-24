@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/ai_generation/presentation/ai_generation_screen.dart';
 import '../../features/asset_library/presentation/asset_library_screen.dart';
-import '../../features/monetization/presentation/credits_screen.dart';
+import '../../features/monetization/presentation/store_screen.dart';
 
 /// Main app shell with bottom navigation
 class AppShell extends ConsumerStatefulWidget {
@@ -27,7 +27,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   final List<Widget> _screens = [
     const AIGenerationScreen(),
     const AssetLibraryScreen(),
-    const CreditsScreen(),
+    const StoreScreen(),
   ];
 
   @override
@@ -102,7 +102,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                       : null,
                   child: const Icon(Icons.account_balance_wallet),
                 ),
-                label: 'Credits',
+                label: 'Store',
               ),
             ],
           ),

@@ -6,7 +6,6 @@ import '../../../core/utils/app_logger.dart';
 import '../../../features/assets/providers/asset_providers.dart';
 import '../../../features/assets/models/asset_model.dart';
 import '../../../shared/widgets/neu_container.dart';
-import '../../../shared/widgets/app_shell.dart';
 
 /// Asset Library Screen - Browse and manage generated assets
 class AssetLibraryScreen extends ConsumerStatefulWidget {
@@ -18,13 +17,13 @@ class AssetLibraryScreen extends ConsumerStatefulWidget {
 
 class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
   String? _userId;
-  
+
   @override
   void initState() {
     super.initState();
     _getUserId();
   }
-  
+
   /// Build the empty state widget when no assets are available
   Widget _buildEmptyState() {
     return Center(
@@ -50,22 +49,23 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
             const SizedBox(height: 8),
             const Text(
               'Start creating amazing assets with AI',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
                 // Get the parent widget that contains the bottom navigation
-                final ScaffoldMessengerState? scaffold = ScaffoldMessenger.of(context);
+                final ScaffoldMessengerState scaffold = ScaffoldMessenger.of(
+                  context,
+                );
                 if (scaffold != null) {
                   // Show a snackbar to inform the user to tap on the Generate tab
                   scaffold.showSnackBar(
                     const SnackBar(
-                      content: Text('Tap on the Generate tab to create your first asset'),
+                      content: Text(
+                        'Tap on the Generate tab to create your first asset',
+                      ),
                       duration: Duration(seconds: 3),
                     ),
                   );
@@ -85,7 +85,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
       ),
     );
   }
-  
+
   /// Build the asset grid to display all assets
   Widget _buildAssetGrid(List<AssetModel> assets) {
     return GridView.builder(
@@ -103,7 +103,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
       },
     );
   }
-  
+
   /// Build a card for a single asset
   Widget _buildAssetCard(AssetModel asset) {
     return NeuContainer(
@@ -115,44 +115,10 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: asset.imagePath.startsWith('local://')
-                ? const Center(
-                    child: Icon(
-                      Icons.image_not_supported,
-                      size: 48,
-                      color: AppColors.textSecondary,
-                    ),
-                  )
-                : Image.network(
-                    asset.imagePath,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      AppLogger.warning('Error loading image: $error');
-                      return const Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          size: 48,
-                          color: AppColors.textSecondary,
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                  ),
+              child: _buildAssetImage(asset),
             ),
           ),
-          
+
           // Asset info
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -171,7 +137,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                
+
                 // Favorite icon
                 if (asset.isFavorite)
                   const Icon(
@@ -186,8 +152,107 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
       ),
     );
   }
-  
-  
+
+  /// Build asset image widget with proper handling for mock/local/cloud images
+  Widget _buildAssetImage(AssetModel asset) {
+    // Handle local/mock images
+    if (asset.imagePath.startsWith('local://')) {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primaryGold.withOpacity(0.1),
+              AppColors.backgroundSecondary.withOpacity(0.3),
+            ],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image,
+              size: 32,
+              color: AppColors.primaryGold.withOpacity(0.7),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Mock Asset',
+              style: TextStyle(
+                color: AppColors.primaryGold,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGold.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '✨ AI Generated ✨',
+                style: TextStyle(
+                  color: AppColors.primaryGold,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Handle cloud/network images
+    return Image.network(
+      asset.imagePath,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) {
+        AppLogger.warning('Error loading image: $error');
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: AppColors.backgroundSecondary,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.broken_image,
+                size: 32,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Failed to Load',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
+              ),
+            ],
+          ),
+        );
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                : null,
+            strokeWidth: 2,
+            color: AppColors.primaryGold,
+          ),
+        );
+      },
+    );
+  }
+
   void _getUserId() {
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -208,7 +273,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
       });
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -267,46 +332,48 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                             ),
                             const SizedBox(height: 4),
                             _userId == null
-                              ? const Text(
-                                  '0',
-                                  style: TextStyle(
-                                    color: AppColors.primaryGold,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                                ? const Text(
+                                    '0',
+                                    style: TextStyle(
+                                      color: AppColors.primaryGold,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : Consumer(
+                                    builder: (context, ref, child) {
+                                      final assetsStream = ref.watch(
+                                        userAssetsProvider(_userId!),
+                                      );
+
+                                      return assetsStream.when(
+                                        data: (assets) => Text(
+                                          '${assets.length}',
+                                          style: const TextStyle(
+                                            color: AppColors.primaryGold,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        loading: () => const Text(
+                                          '...',
+                                          style: TextStyle(
+                                            color: AppColors.primaryGold,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        error: (_, __) => const Text(
+                                          '0',
+                                          style: TextStyle(
+                                            color: AppColors.primaryGold,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                )
-                              : Consumer(
-                                  builder: (context, ref, child) {
-                                    final assetsStream = ref.watch(userAssetsProvider(_userId!));
-                                    
-                                    return assetsStream.when(
-                                      data: (assets) => Text(
-                                        '${assets.length}',
-                                        style: const TextStyle(
-                                          color: AppColors.primaryGold,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      loading: () => const Text(
-                                        '...',
-                                        style: TextStyle(
-                                          color: AppColors.primaryGold,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      error: (_, __) => const Text(
-                                        '0',
-                                        style: TextStyle(
-                                          color: AppColors.primaryGold,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
                           ],
                         ),
                       ),
@@ -328,55 +395,61 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                             ),
                             const SizedBox(height: 4),
                             _userId == null
-                              ? const Text(
-                                  '0 MB',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                )
-                              : Consumer(
-                                  builder: (context, ref, child) {
-                                    final assetsStream = ref.watch(userAssetsProvider(_userId!));
-                                    
-                                    return assetsStream.when(
-                                      data: (assets) {
-                                        // Calculate total storage in MB
-                                        final totalBytes = assets.fold<int>(
-                                          0,
-                                          (sum, asset) => sum + (asset.fileSizeBytes ?? 0),
-                                        );
-                                        final totalMB = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-                                        
-                                        return Text(
-                                          '$totalMB MB',
-                                          style: const TextStyle(
+                                ? const Text(
+                                    '0 MB',
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                                : Consumer(
+                                    builder: (context, ref, child) {
+                                      final assetsStream = ref.watch(
+                                        userAssetsProvider(_userId!),
+                                      );
+
+                                      return assetsStream.when(
+                                        data: (assets) {
+                                          // Calculate total storage in MB
+                                          final totalBytes = assets.fold<int>(
+                                            0,
+                                            (sum, asset) =>
+                                                sum +
+                                                (asset.fileSizeBytes ?? 0),
+                                          );
+                                          final totalMB =
+                                              (totalBytes / (1024 * 1024))
+                                                  .toStringAsFixed(1);
+
+                                          return Text(
+                                            '$totalMB MB',
+                                            style: const TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          );
+                                        },
+                                        loading: () => const Text(
+                                          '...',
+                                          style: TextStyle(
                                             color: AppColors.textPrimary,
                                             fontSize: 18,
                                             fontWeight: FontWeight.w600,
                                           ),
-                                        );
-                                      },
-                                      loading: () => const Text(
-                                        '...',
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
                                         ),
-                                      ),
-                                      error: (_, __) => const Text(
-                                        '0 MB',
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
+                                        error: (_, __) => const Text(
+                                          '0 MB',
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                      );
+                                    },
+                                  ),
                           ],
                         ),
                       ),
@@ -389,31 +462,33 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                 // Asset Grid or Empty State
                 Expanded(
                   child: _userId == null
-                    ? _buildEmptyState()
-                    : Consumer(
-                        builder: (context, ref, child) {
-                          final assetsStream = ref.watch(userAssetsProvider(_userId!));
-                          
-                          return assetsStream.when(
-                            data: (assets) {
-                              if (assets.isEmpty) {
-                                return _buildEmptyState();
-                              }
-                              
-                              return _buildAssetGrid(assets);
-                            },
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (error, stackTrace) {
-                              AppLogger.error('Error loading assets: $error');
-                              return Center(
-                                child: Text('Error loading assets: $error'),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                      ? _buildEmptyState()
+                      : Consumer(
+                          builder: (context, ref, child) {
+                            final assetsStream = ref.watch(
+                              userAssetsProvider(_userId!),
+                            );
+
+                            return assetsStream.when(
+                              data: (assets) {
+                                if (assets.isEmpty) {
+                                  return _buildEmptyState();
+                                }
+
+                                return _buildAssetGrid(assets);
+                              },
+                              loading: () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              error: (error, stackTrace) {
+                                AppLogger.error('Error loading assets: $error');
+                                return Center(
+                                  child: Text('Error loading assets: $error'),
+                                );
+                              },
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
