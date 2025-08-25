@@ -27,6 +27,9 @@ dependencies:
   isar_flutter_libs: ^3.1.0+1
   path_provider: ^2.1.4
   
+  # Web Storage
+  shared_preferences: ^2.3.3
+  
   # Cloud Backend (Supabase - FREE tier, better cost control)
   supabase_flutter: ^2.5.6
   

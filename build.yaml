@@ -1,0 +1,6 @@
+targets:
+  $default:
+    builders:
+      isar_generator|isar_generator:
+        options:
+          web_safe_integers: true
