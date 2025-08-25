@@ -2,7 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/asset_model.dart';
 import '../services/asset_service.dart';
-import '../../../core/database/isar_service.dart';
+import '../../../core/database/storage_service.dart';
 
 part 'asset_providers.g.dart';
 
@@ -17,10 +17,10 @@ AssetService assetService(AssetServiceRef ref) {
 /// Initialize AssetService asynchronously
 @riverpod
 Future<AssetService> initAssetService(InitAssetServiceRef ref) async {
-  final isar = await IsarService.getInstance();
+  final storage = await StorageService.getInstance();
   final supabase = Supabase.instance.client;
 
-  return AssetService(isar: isar, supabase: supabase);
+  return AssetService(storage: storage, supabase: supabase);
 }
 
 /// Provider for getting all assets as a stream

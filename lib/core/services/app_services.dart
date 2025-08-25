@@ -6,6 +6,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 // import 'package:google_mobile_ads/google_mobile_ads.dart'; // Temporarily disabled
 import '../config/environment.dart';
 import '../utils/app_logger.dart';
+import 'notification_service.dart';
 
 /// Core services initialization for AssetCraft AI
 class AppServices {
@@ -38,6 +39,15 @@ class AppServices {
     if (!kIsWeb) {
       if (await _initializeOneSignal()) {
         successfulServices.add('OneSignal');
+
+        // Initialize notification service after OneSignal
+        try {
+          await NotificationService.instance.initialize();
+          successfulServices.add('NotificationService');
+        } catch (e) {
+          failedServices.add('NotificationService');
+          AppLogger.warning('⚠️ NotificationService initialization failed: $e');
+        }
       } else {
         failedServices.add('OneSignal');
       }
@@ -165,6 +175,9 @@ class AppServices {
 
       // Request permission for notifications
       await OneSignal.Notifications.requestPermission(true);
+
+      // Set up notification handlers for the app
+      NotificationService.instance.setNotificationHandlers();
 
       AppLogger.info('✅ OneSignal initialized successfully');
       return true;

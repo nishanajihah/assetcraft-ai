@@ -59,18 +59,16 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                 final ScaffoldMessengerState scaffold = ScaffoldMessenger.of(
                   context,
                 );
-                if (scaffold != null) {
-                  // Show a snackbar to inform the user to tap on the Generate tab
-                  scaffold.showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Tap on the Generate tab to create your first asset',
-                      ),
-                      duration: Duration(seconds: 3),
+                // Show a snackbar to inform the user to tap on the Generate tab
+                scaffold.showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Tap on the Generate tab to create your first asset',
                     ),
-                  );
-                }
-              },
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+                            },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryGold,
                 foregroundColor: AppColors.textOnGold,

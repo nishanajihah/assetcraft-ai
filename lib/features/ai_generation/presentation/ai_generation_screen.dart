@@ -13,6 +13,7 @@ import '../../../core/providers/credits_provider.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../shared/widgets/enhanced_containers.dart';
 import '../providers/generation_state_providers.dart';
+import '../../gemstones/gemstone_ui_provider.dart';
 import '../../assets/models/asset_model.dart';
 import '../../assets/providers/asset_providers.dart';
 
@@ -430,7 +431,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final userCreditsAsync = ref.watch(userCreditsProvider);
+    final userCreditsAsync = ref.watch(currentUserGemstonesProvider);
     final localCredits = ref.watch(totalAvailableCreditsProvider);
     final isAiAvailable = ref.watch(isAiServiceAvailableProvider);
     final screenWidth = MediaQuery.of(context).size.width;

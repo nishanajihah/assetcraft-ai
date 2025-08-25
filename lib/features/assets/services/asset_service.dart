@@ -1,25 +1,27 @@
 import 'dart:typed_data';
-import 'package:isar/isar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/asset_model.dart';
 import '../../../core/config/environment.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/database/storage_service.dart';
 
-/// Service for managing assets with both local (Isar) and cloud (Supabase) storage
+/// Service for managing assets with both local and cloud (Supabase) storage
 ///
 /// This service provides a unified interface for saving, retrieving, and managing
 /// AI-generated assets. It handles synchronization between local storage and
-/// cloud storage automatically.
+/// cloud storage automatically. Uses platform-specific storage (Isar for mobile, SharedPreferences for web).
 class AssetService {
-  final Isar _isar;
+  final StorageService _storage;
   final SupabaseClient _supabase;
   static const String _bucketName = 'assets';
   static const _uuid = Uuid();
 
-  AssetService({required Isar isar, required SupabaseClient supabase})
-    : _isar = isar,
-      _supabase = supabase;
+  AssetService({
+    required StorageService storage,
+    required SupabaseClient supabase,
+  }) : _storage = storage,
+       _supabase = supabase;
 
   /// Save an asset with image data to both Supabase Storage and local Isar database
   ///
@@ -81,10 +83,8 @@ class AssetService {
         createdAt: asset.createdAt,
       );
 
-      // Step 4: Save to local Isar database
-      await _isar.writeTxn(() async {
-        await _isar.assetModels.put(updatedAsset);
-      });
+      // Step 4: Save to local storage
+      await _storage.saveAsset(updatedAsset);
 
       AppLogger.info('✅ Asset saved successfully: ${updatedAsset.supabaseId}');
       AppLogger.info('📍 Storage type: ${isCloudStored ? "Cloud" : "Local"}');
@@ -110,9 +110,7 @@ class AssetService {
       );
 
       try {
-        await _isar.writeTxn(() async {
-          await _isar.assetModels.put(failedAsset);
-        });
+        await _storage.saveAsset(failedAsset);
       } catch (localSaveError) {
         AppLogger.error(
           '❌ Failed to save error state locally: $localSaveError',
@@ -123,17 +121,15 @@ class AssetService {
     }
   }
 
-  /// Get all assets as a reactive stream from the local Isar database
+  /// Get all assets as a reactive stream from the local storage
   ///
   /// Returns a Stream that automatically updates when assets are added,
   /// modified, or deleted from the local database.
   Stream<List<AssetModel>> getAssets() {
     try {
-      AppLogger.debug('📱 Getting assets stream from local database');
+      AppLogger.debug('📱 Getting assets stream from local storage');
 
-      return _isar.assetModels.where().sortByCreatedAtDesc().watch(
-        fireImmediately: true,
-      );
+      return _storage.watchAssets();
     } catch (e) {
       AppLogger.error('❌ Error getting assets stream: $e');
       // Return empty stream in case of error
@@ -148,11 +144,13 @@ class AssetService {
     try {
       AppLogger.debug('👤 Getting assets for user: $userId');
 
-      return _isar.assetModels
-          .filter()
-          .userIdEqualTo(userId)
-          .sortByCreatedAtDesc()
-          .watch(fireImmediately: true);
+      return _storage.watchAssets().map((assets) {
+        final filtered = assets
+            .where((asset) => asset.userId == userId)
+            .toList();
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return filtered;
+      });
     } catch (e) {
       AppLogger.error('❌ Error getting user assets: $e');
       return Stream.value([]);
@@ -164,11 +162,11 @@ class AssetService {
     try {
       AppLogger.debug('⭐ Getting favorite assets stream');
 
-      return _isar.assetModels
-          .filter()
-          .isFavoriteEqualTo(true)
-          .sortByCreatedAtDesc()
-          .watch(fireImmediately: true);
+      return _storage.watchAssets().map((assets) {
+        final filtered = assets.where((asset) => asset.isFavorite).toList();
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return filtered;
+      });
     } catch (e) {
       AppLogger.error('❌ Error getting favorite assets: $e');
       return Stream.value([]);
@@ -184,10 +182,8 @@ class AssetService {
 
       final updatedAsset = asset.copyWith(isFavorite: !asset.isFavorite);
 
-      // Update in local database
-      await _isar.writeTxn(() async {
-        await _isar.assetModels.put(updatedAsset);
-      });
+      // Update in local storage
+      await _storage.updateAsset(updatedAsset);
 
       AppLogger.info('✅ Favorite status updated locally');
 
@@ -223,10 +219,8 @@ class AssetService {
         }
       }
 
-      // Delete from local database
-      await _isar.writeTxn(() async {
-        await _isar.assetModels.delete(asset.id);
-      });
+      // Delete from local storage
+      await _storage.deleteAsset(asset.supabaseId);
 
       // Delete from Supabase database
       await _deleteAssetFromSupabaseDatabase(asset.supabaseId);
@@ -247,11 +241,7 @@ class AssetService {
         return getAssets();
       }
 
-      return _isar.assetModels
-          .filter()
-          .promptContains(query, caseSensitive: false)
-          .sortByCreatedAtDesc()
-          .watch(fireImmediately: true);
+      return _storage.searchAssets(query);
     } catch (e) {
       AppLogger.error('❌ Error searching assets: $e');
       return Stream.value([]);
@@ -263,11 +253,7 @@ class AssetService {
     try {
       AppLogger.debug('🏷️ Getting assets by tags: $tags');
 
-      return _isar.assetModels
-          .filter()
-          .anyOf(tags, (q, tag) => q.tagsElementContains(tag))
-          .sortByCreatedAtDesc()
-          .watch(fireImmediately: true);
+      return _storage.getAssetsByTags(tags);
     } catch (e) {
       AppLogger.error('❌ Error getting assets by tags: $e');
       return Stream.value([]);
@@ -281,9 +267,7 @@ class AssetService {
 
       final updatedAsset = asset.copyWith(tags: newTags);
 
-      await _isar.writeTxn(() async {
-        await _isar.assetModels.put(updatedAsset);
-      });
+      await _storage.updateAsset(updatedAsset);
 
       await _updateAssetInSupabaseDatabase(updatedAsset);
 
@@ -310,9 +294,7 @@ class AssetService {
           .toList();
 
       if (cloudAssets.isNotEmpty) {
-        await _isar.writeTxn(() async {
-          await _isar.assetModels.putAll(cloudAssets);
-        });
+        await _storage.saveMultipleAssets(cloudAssets);
 
         AppLogger.info('✅ Synced ${cloudAssets.length} assets from cloud');
       }
