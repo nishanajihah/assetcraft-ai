@@ -45,7 +45,7 @@ class NotificationService {
 
     try {
       // Check if user has granted permission for notifications
-      final hasPermission = await OneSignal.Notifications.permission;
+      final hasPermission = OneSignal.Notifications.permission;
       if (!hasPermission) {
         AppLogger.info('📵 Notification permission not granted');
         return;
@@ -72,7 +72,7 @@ class NotificationService {
     if (!_isInitialized || kIsWeb) return;
 
     try {
-      final hasPermission = await OneSignal.Notifications.permission;
+      final hasPermission = OneSignal.Notifications.permission;
       if (!hasPermission) return;
 
       AppLogger.info('🔔 Welcome notification triggered');
@@ -89,7 +89,7 @@ class NotificationService {
     if (!_isInitialized || kIsWeb) return;
 
     try {
-      final hasPermission = await OneSignal.Notifications.permission;
+      final hasPermission = OneSignal.Notifications.permission;
       if (!hasPermission) return;
 
       if (remainingCredits <= 3) {
@@ -111,7 +111,7 @@ class NotificationService {
     if (!_isInitialized || kIsWeb) return;
 
     try {
-      final hasPermission = await OneSignal.Notifications.permission;
+      final hasPermission = OneSignal.Notifications.permission;
       if (!hasPermission) return;
 
       final message =
@@ -169,7 +169,7 @@ class NotificationService {
     if (!_isInitialized || kIsWeb) return false;
 
     try {
-      return await OneSignal.Notifications.permission;
+      return OneSignal.Notifications.permission;
     } catch (e) {
       AppLogger.error('❌ Failed to check notification permission: $e');
       return false;
