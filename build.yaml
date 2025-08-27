@@ -1,6 +1,8 @@
 targets:
   $default:
     builders:
-      isar_generator|isar_generator:
-        options:
-          web_safe_integers: true
+      # Temporarily disabled isar_generator due to analyzer version conflicts
+      # Will re-enable once analyzer compatibility is resolved
+      # isar_generator|isar_generator:
+      #   options:
+      #     web_safe_integers: true

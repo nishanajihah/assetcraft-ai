@@ -1,4 +1,4 @@
-package com.example.assetcraft_ai
+package com.nishanajihah.assetcraft_ai
 
 import io.flutter.embedding.android.FlutterActivity
 

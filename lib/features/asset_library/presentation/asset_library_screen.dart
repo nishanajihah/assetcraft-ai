@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../features/assets/providers/asset_providers.dart';
 import '../../../features/assets/models/asset_model.dart';
+import '../../../features/assets/providers/asset_providers.dart';
 import '../../../shared/widgets/neu_container.dart';
+import '../../../mock/widgets/mock_indicator.dart';
 
 /// Asset Library Screen - Browse and manage generated assets
 class AssetLibraryScreen extends ConsumerStatefulWidget {
@@ -68,7 +69,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                     duration: Duration(seconds: 3),
                   ),
                 );
-                            },
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryGold,
                 foregroundColor: AppColors.textOnGold,
@@ -291,6 +292,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
                   ),
                 ),
               ),
+              const MockStatusChip(),
               IconButton(
                 onPressed: () {
                   // TODO: Implement search

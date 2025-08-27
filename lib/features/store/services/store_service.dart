@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../mock/mock_config.dart';
 
 part 'store_service.g.dart';
 
@@ -233,6 +234,14 @@ StoreService storeService(StoreServiceRef ref) {
 /// Provider for available packages
 @riverpod
 Future<List<Package>> availablePackages(AvailablePackagesRef ref) async {
+  // Check if mock mode is enabled
+  if (MockConfig.isMockStoreEnabled) {
+    AppLogger.info('🎭 [MOCK] Using mock store packages');
+    // Return empty list for now since we can't easily create Package objects
+    // The UI will handle this gracefully
+    return [];
+  }
+
   final storeService = ref.watch(storeServiceProvider);
   return await storeService.getAvailablePackages();
 }
@@ -240,6 +249,13 @@ Future<List<Package>> availablePackages(AvailablePackagesRef ref) async {
 /// Provider for subscription status
 @riverpod
 Future<bool> hasActiveSubscription(HasActiveSubscriptionRef ref) async {
+  // Check if mock mode is enabled
+  if (MockConfig.isMockStoreEnabled) {
+    AppLogger.info('🎭 [MOCK] Using mock subscription status');
+    // Return false for mock mode (can be made configurable later)
+    return false;
+  }
+
   final storeService = ref.watch(storeServiceProvider);
   return await storeService.hasActiveSubscription();
 }

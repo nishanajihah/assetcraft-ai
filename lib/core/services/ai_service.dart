@@ -5,6 +5,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../config/environment.dart';
 import '../utils/app_logger.dart';
+import '../../mock/mock_config.dart';
 
 part 'ai_service.g.dart';
 
@@ -85,7 +86,7 @@ class AiService {
       AppLogger.error('❌ Error generating asset: $e');
 
       // Don't fall back to mock in production - return null to show proper error
-      if (!Environment.enableMockAI) {
+      if (!MockConfig.isMockAiEnabled) {
         AppLogger.info('🚫 Production mode: returning null instead of mock');
         return null;
       }

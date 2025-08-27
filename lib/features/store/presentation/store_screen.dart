@@ -6,6 +6,9 @@ import '../../../shared/widgets/neu_container.dart';
 import '../../gemstones/gemstone_ui_provider.dart';
 import '../services/store_service.dart';
 import '../../gemstones/widgets/gemstone_notification_widget.dart';
+import '../../../mock/mock_config.dart';
+import '../../../mock/store/mock_store_service.dart';
+import '../../../core/services/user_service.dart';
 
 /// Enhanced Store Screen using the new StoreService
 class StoreScreen extends ConsumerStatefulWidget {
@@ -114,6 +117,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildGemstonePackagesSection() {
+    // Check if mock mode is enabled
+    if (MockConfig.isMockStoreEnabled) {
+      return _buildMockGemstonePackages();
+    }
+
     final packagesAsync = ref.watch(availablePackagesProvider);
 
     return Column(
@@ -513,5 +521,216 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   void _showComingSoon() {
     _showMessage('Pro subscription coming soon!', isError: false);
+  }
+
+  /// Build mock gemstone packages when in mock mode
+  Widget _buildMockGemstonePackages() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Gemstone Packages',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGold.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primaryGold, width: 1),
+              ),
+              child: const Text(
+                'MOCK',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryGold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Column(
+          children: MockStoreService.mockPackages
+              .where((package) => !package.isSubscription)
+              .map(
+                (mockPackage) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildMockPackageCard(mockPackage),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  /// Build a mock package card
+  Widget _buildMockPackageCard(MockPackage mockPackage) {
+    return NeuContainer(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          // Gemstone icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGold.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.diamond,
+              color: AppColors.primaryGold,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Package details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mockPackage.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  mockPackage.description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      '${mockPackage.gemstones}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryGold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'gemstones',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Price and purchase button
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                mockPackage.priceString,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _isLoading
+                    ? null
+                    : () => _handleMockPurchase(mockPackage),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: AppColors.textOnGold,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.textOnGold,
+                        ),
+                      )
+                    : const Text('Buy'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Handle mock purchase
+  Future<void> _handleMockPurchase(MockPackage mockPackage) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await MockStoreService.simulatePurchase(mockPackage);
+
+      if (result.isSuccess) {
+        // Add gemstones to user account
+        if (result.gemstonesReceived != null && result.gemstonesReceived! > 0) {
+          final userService = ref.read(userServiceProvider);
+          await userService.addCredits(result.gemstonesReceived!);
+        }
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully purchased ${mockPackage.title}!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage ?? 'Purchase failed'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Mock purchase error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    setState(() => _isLoading = false);
   }
 }
