@@ -170,7 +170,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.primaryDark.withOpacity(0.7),
+                            color: AppColors.primaryDark.withValues(alpha: 0.7),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -213,7 +213,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       'Initializing...',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: AppColors.primaryDark.withOpacity(0.6),
+                        color: AppColors.primaryDark.withValues(alpha: 0.6),
                       ),
                     ),
                   );

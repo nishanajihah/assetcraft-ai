@@ -111,14 +111,14 @@ class LoginScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: AppColors.glassBackground.withOpacity(0.2),
+        color: AppColors.glassBackground.withValues(alpha: 0.2),
         border: Border.all(
-          color: AppColors.glassBorder.withOpacity(0.3),
+          color: AppColors.glassBorder.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.neuShadowDark.withOpacity(0.1),
+            color: AppColors.neuShadowDark.withValues(alpha: 0.1),
             offset: const Offset(0, 8),
             blurRadius: 32,
             spreadRadius: 0,
@@ -269,9 +269,9 @@ class LoginScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withOpacity(0.3), width: 1),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -545,10 +545,10 @@ class LoginScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryGold.withOpacity(0.1),
+                  color: AppColors.primaryGold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.primaryGold.withOpacity(0.3),
+                    color: AppColors.primaryGold.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(

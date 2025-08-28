@@ -114,10 +114,10 @@ void main() {
 
     testWidgets('App handles small screen sizes', (WidgetTester tester) async {
       // Set small screen size
-      tester.binding.window.physicalSizeTestValue = const Size(350, 600);
-      tester.binding.window.devicePixelRatioTestValue = 1.0;
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      addTearDown(tester.binding.window.clearDevicePixelRatioTestValue);
+      tester.view.physicalSize = const Size(350, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(const ProviderScope(child: AssetCraftApp()));
       await tester.pumpAndSettle();
@@ -131,10 +131,10 @@ void main() {
       WidgetTester tester,
     ) async {
       // Set landscape size
-      tester.binding.window.physicalSizeTestValue = const Size(800, 400);
-      tester.binding.window.devicePixelRatioTestValue = 1.0;
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      addTearDown(tester.binding.window.clearDevicePixelRatioTestValue);
+      tester.view.physicalSize = const Size(800, 400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(const ProviderScope(child: AssetCraftApp()));
       await tester.pumpAndSettle();

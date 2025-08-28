@@ -542,7 +542,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.primaryGold.withOpacity(0.2),
+                color: AppColors.primaryGold.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.primaryGold, width: 1),
               ),
@@ -584,7 +584,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primaryGold.withOpacity(0.1),
+              color: AppColors.primaryGold.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
