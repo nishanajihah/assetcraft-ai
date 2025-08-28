@@ -36,7 +36,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
             Icon(
               Icons.photo_library_outlined,
               size: 80,
-              color: AppColors.textSecondary.withOpacity(0.5),
+              color: AppColors.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -164,8 +164,8 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.primaryGold.withOpacity(0.1),
-              AppColors.backgroundSecondary.withOpacity(0.3),
+              AppColors.primaryGold.withValues(alpha: 0.1),
+              AppColors.backgroundSecondary.withValues(alpha: 0.3),
             ],
           ),
         ),
@@ -175,7 +175,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
             Icon(
               Icons.image,
               size: 32,
-              color: AppColors.primaryGold.withOpacity(0.7),
+              color: AppColors.primaryGold.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 8),
             Text(
@@ -190,7 +190,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primaryGold.withOpacity(0.1),
+                color: AppColors.primaryGold.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

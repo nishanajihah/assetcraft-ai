@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/app_logger.dart';
@@ -225,7 +226,7 @@ class StoreService {
 
 /// Riverpod provider for StoreService
 @riverpod
-StoreService storeService(StoreServiceRef ref) {
+StoreService storeService(Ref ref) {
   final userService = ref.watch(userServiceProvider);
   final notificationService = ref.watch(notificationServiceProvider);
   return StoreService(userService, notificationService);
@@ -233,7 +234,7 @@ StoreService storeService(StoreServiceRef ref) {
 
 /// Provider for available packages
 @riverpod
-Future<List<Package>> availablePackages(AvailablePackagesRef ref) async {
+Future<List<Package>> availablePackages(Ref ref) async {
   // Check if mock mode is enabled
   if (MockConfig.isMockStoreEnabled) {
     AppLogger.info('🎭 [MOCK] Using mock store packages');
@@ -248,7 +249,7 @@ Future<List<Package>> availablePackages(AvailablePackagesRef ref) async {
 
 /// Provider for subscription status
 @riverpod
-Future<bool> hasActiveSubscription(HasActiveSubscriptionRef ref) async {
+Future<bool> hasActiveSubscription(Ref ref) async {
   // Check if mock mode is enabled
   if (MockConfig.isMockStoreEnabled) {
     AppLogger.info('🎭 [MOCK] Using mock subscription status');

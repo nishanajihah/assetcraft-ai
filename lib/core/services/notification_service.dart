@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
 import '../config/environment.dart';
@@ -235,13 +236,13 @@ class NotificationService {
 
 /// Riverpod provider for the notification service
 @riverpod
-NotificationService notificationService(NotificationServiceRef ref) {
+NotificationService notificationService(Ref ref) {
   return NotificationService.instance;
 }
 
 /// Provider to check if notifications are available and enabled
 @riverpod
-Future<bool> notificationsEnabled(NotificationsEnabledRef ref) async {
+Future<bool> notificationsEnabled(Ref ref) async {
   final service = ref.watch(notificationServiceProvider);
   return await service.hasPermission;
 }

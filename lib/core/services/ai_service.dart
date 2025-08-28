@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/environment.dart';
 import '../utils/app_logger.dart';
 import '../../mock/mock_config.dart';
@@ -695,13 +696,13 @@ Format as JSON:
 /// This provider creates and exposes an instance of AiService.
 /// It uses riverpod_annotation for code generation.
 @riverpod
-AiService aiService(AiServiceRef ref) {
+AiService aiService(Ref ref) {
   return AiService();
 }
 
 /// Provider for checking if AI service is available
 @riverpod
-bool isAiServiceAvailable(IsAiServiceAvailableRef ref) {
+bool isAiServiceAvailable(Ref ref) {
   try {
     final aiService = ref.watch(aiServiceProvider);
     return aiService.isConfigured;

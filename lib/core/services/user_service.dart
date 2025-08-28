@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
@@ -258,21 +259,21 @@ class UserService {
 
 /// Riverpod Provider that exposes the UserService
 @riverpod
-UserService userService(UserServiceRef ref) {
+UserService userService(Ref ref) {
   final notificationService = ref.watch(notificationServiceProvider);
   return UserService(Supabase.instance.client, notificationService);
 }
 
 /// Provider for getting current user credits (Future-based)
 @riverpod
-Future<int> userCredits(UserCreditsRef ref) async {
+Future<int> userCredits(Ref ref) async {
   final userService = ref.watch(userServiceProvider);
   return await userService.getCredits();
 }
 
 /// Provider for streaming user credits (Stream-based)
 @riverpod
-Stream<int> userCreditsStream(UserCreditsStreamRef ref) {
+Stream<int> userCreditsStream(Ref ref) {
   final userService = ref.watch(userServiceProvider);
   return userService.creditsStream;
 }

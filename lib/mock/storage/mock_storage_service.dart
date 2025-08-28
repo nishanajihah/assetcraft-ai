@@ -190,7 +190,7 @@ class MockStorageService extends StorageService {
       ..supabaseId = 'mock_${DateTime.now().millisecondsSinceEpoch}'
       ..userId = 'user_123'
       ..prompt = prompt
-      ..imagePath = 'https://picsum.photos/512/512?random=${_idCounter}'
+      ..imagePath = 'https://picsum.photos/512/512?random=$_idCounter'
       ..createdAt = DateTime.now()
       ..isFavorite = false
       ..tags = tags

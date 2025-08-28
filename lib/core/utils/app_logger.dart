@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
 /// Centralized logger for AssetCraft AI
@@ -14,7 +15,7 @@ class AppLogger {
         lineLength: 50,
         colors: true,
         printEmojis: true,
-        printTime: true,
+        dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
       level: _getLogLevel(isDevelopment, isStaging),
     );
@@ -55,7 +56,7 @@ class AppLogger {
     if (_logger != null) {
       info(message);
     } else {
-      print(message);
+      debugPrint(message);
     }
   }
 }

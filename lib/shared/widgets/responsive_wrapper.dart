@@ -90,7 +90,9 @@ class ResponsiveText extends StatelessWidget {
       textAlign: textAlign,
       maxLines: maxLines,
       overflow: overflow ?? TextOverflow.ellipsis,
-      textScaleFactor: 1.0, // Prevent system text scaling from breaking layout
+      textScaler: const TextScaler.linear(
+        1.0,
+      ), // Prevent system text scaling from breaking layout
     );
   }
 }

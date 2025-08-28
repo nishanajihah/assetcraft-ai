@@ -1,4 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
+import '../core/utils/app_logger.dart';
 
 /// Centralized mock configuration service
 /// Manages all mock/testing flags from environment variables
@@ -162,25 +164,29 @@ class MockConfig {
 
   /// Helper to log current configuration (useful for debugging)
   static void printConfiguration() {
-    print('🔧 MockConfig Status:');
-    print('  Environment: $environment');
-    print('  Mock Mode: ${isMockModeEnabled ? "ENABLED" : "DISABLED"}');
+    if (kDebugMode) {
+      AppLogger.debug('🔧 MockConfig Status:');
+      AppLogger.debug('  Environment: $environment');
+      AppLogger.debug(
+        '  Mock Mode: ${isMockModeEnabled ? "ENABLED" : "DISABLED"}',
+      );
 
-    if (isMockModeEnabled ||
-        isMockAiEnabled ||
-        isMockStorageEnabled ||
-        isMockStoreEnabled) {
-      print('  🧪 Active Mocks:');
-      if (isMockAiEnabled) print('    - AI Generation');
-      if (isMockStorageEnabled) print('    - Storage Service');
-      if (isMockStoreEnabled) print('    - Store/Purchases');
-      if (isMockNotificationsEnabled) print('    - Notifications');
-      if (isMockAuthEnabled) print('    - Authentication');
-      if (isMockGemstonesEnabled) print('    - Gemstones');
-    }
+      if (isMockModeEnabled ||
+          isMockAiEnabled ||
+          isMockStorageEnabled ||
+          isMockStoreEnabled) {
+        AppLogger.debug('  🧪 Active Mocks:');
+        if (isMockAiEnabled) AppLogger.debug('    - AI Generation');
+        if (isMockStorageEnabled) AppLogger.debug('    - Storage Service');
+        if (isMockStoreEnabled) AppLogger.debug('    - Store/Purchases');
+        if (isMockNotificationsEnabled) AppLogger.debug('    - Notifications');
+        if (isMockAuthEnabled) AppLogger.debug('    - Authentication');
+        if (isMockGemstonesEnabled) AppLogger.debug('    - Gemstones');
+      }
 
-    if (showMockIndicator) {
-      print('  📱 Mock indicator will be shown in UI');
+      if (showMockIndicator) {
+        AppLogger.debug('  📱 Mock indicator will be shown in UI');
+      }
     }
   }
 }

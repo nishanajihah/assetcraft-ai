@@ -100,7 +100,9 @@ class MockAIService {
     }
 
     // Random gradient background
-    return Color((Random().nextDouble() * 0xFFFFFF).toInt()).withOpacity(0.8);
+    return Color(
+      (Random().nextDouble() * 0xFFFFFF).toInt(),
+    ).withValues(alpha: 0.8);
   }
 
   /// Draw style-specific patterns
@@ -153,7 +155,7 @@ class MockAIService {
 
     // Glowing circles
     paint.style = PaintingStyle.fill;
-    paint.color = const Color(0xFFFF00FF).withOpacity(0.6);
+    paint.color = const Color(0xFFFF00FF).withValues(alpha: 0.6);
     canvas.drawCircle(Offset(width * 0.3, height * 0.3), 40, paint);
     canvas.drawCircle(Offset(width * 0.7, height * 0.7), 30, paint);
   }
@@ -198,8 +200,8 @@ class MockAIService {
       Offset(0, 0),
       Offset(width.toDouble(), height.toDouble()),
       [
-        const Color(0xFF87CEEB).withOpacity(0.3),
-        const Color(0xFF4682B4).withOpacity(0.3),
+        const Color(0xFF87CEEB).withValues(alpha: 0.3),
+        const Color(0xFF4682B4).withValues(alpha: 0.3),
       ],
     );
 
@@ -211,7 +213,7 @@ class MockAIService {
 
     // Texture-like pattern
     paint.shader = null;
-    paint.color = Colors.white.withOpacity(0.1);
+    paint.color = Colors.white.withValues(alpha: 0.1);
     final random = Random(42); // Fixed seed for consistent pattern
 
     for (int i = 0; i < 100; i++) {
@@ -229,7 +231,7 @@ class MockAIService {
     int height,
   ) {
     // Simple geometric shapes
-    paint.color = Colors.white.withOpacity(0.3);
+    paint.color = Colors.white.withValues(alpha: 0.3);
     paint.style = PaintingStyle.fill;
 
     canvas.drawRect(
@@ -379,7 +381,7 @@ class MockAIService {
   /// Draw mock watermark
   static void _drawMockWatermark(Canvas canvas, int width, int height) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.7)
+      ..color = Colors.white.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     // Simple "MOCK" text representation using basic shapes
