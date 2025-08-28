@@ -271,7 +271,10 @@ class LoginScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: AppColors.error.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -448,12 +451,22 @@ class LoginScreen extends ConsumerWidget {
         loginFormNotifier.setError('Login failed. Please try again.');
       }
     } catch (e) {
-      await _handleLoginError(context, e, loginFormState, loginFormNotifier);
+      _handleLoginError(context, e, loginFormState, loginFormNotifier);
     }
   }
 
+  /// Safe wrapper for handling login errors
+  void _handleLoginError(
+    BuildContext context,
+    dynamic error,
+    LoginFormState loginFormState,
+    LoginFormNotifier loginFormNotifier,
+  ) {
+    _handleLoginErrorAsync(context, error, loginFormState, loginFormNotifier);
+  }
+
   /// Handle different types of login errors
-  Future<void> _handleLoginError(
+  Future<void> _handleLoginErrorAsync(
     BuildContext context,
     dynamic error,
     LoginFormState loginFormState,
@@ -488,7 +501,9 @@ class LoginScreen extends ConsumerWidget {
     } else if (errorMessage.contains('user_not_found')) {
       // Explicitly user not found (rare in Supabase)
       AppLogger.info('Login failed: User not found');
-      await _showUserNotFoundDialog(context, loginFormState.email);
+      if (context.mounted) {
+        await _showUserNotFoundDialog(context, loginFormState.email);
+      }
     } else if (errorMessage.contains('too_many_requests')) {
       AppLogger.warning('Login failed: Too many requests');
       loginFormNotifier.setError(

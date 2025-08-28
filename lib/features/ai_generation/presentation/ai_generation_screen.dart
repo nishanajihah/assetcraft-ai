@@ -156,7 +156,9 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
             _currentStep = GenerationStep.preview;
             _isGenerating = false;
           });
-          _showSuccess('Asset generated successfully!');
+          if (mounted) {
+            _showSuccess('Asset generated successfully!');
+          }
         } else {
           AppLogger.warning('⚠️ Generated image data failed validation');
           setState(() {
@@ -399,9 +401,11 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       AppLogger.info('✅ Asset saved successfully: ${savedAsset.supabaseId}');
 
       // Show success message
-      _showSuccess(
-        'Asset saved to library! You can find it in your collection.',
-      );
+      if (mounted) {
+        _showSuccess(
+          'Asset saved to library! You can find it in your collection.',
+        );
+      }
     } catch (e) {
       AppLogger.error('❌ Error saving asset: $e');
       _showError('Failed to save asset: ${e.toString()}');

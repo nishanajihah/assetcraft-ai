@@ -396,7 +396,10 @@ class SignUpScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: AppColors.error.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -568,16 +571,15 @@ class SignUpScreen extends ConsumerWidget {
         );
       }
     } catch (e) {
-      await _handleSignUpError(context, e, signUpFormNotifier);
+      _handleSignUpError(e, signUpFormNotifier);
     }
   }
 
   /// Handle different types of signup errors
-  Future<void> _handleSignUpError(
-    BuildContext context,
+  void _handleSignUpError(
     dynamic error,
     SignUpFormNotifier signUpFormNotifier,
-  ) async {
+  ) {
     final errorMessage = error.toString().toLowerCase();
 
     // Log the signup error for debugging
