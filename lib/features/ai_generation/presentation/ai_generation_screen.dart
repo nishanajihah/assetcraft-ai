@@ -9,7 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/ai_service.dart';
 import '../../../core/services/user_service.dart';
-import '../../../core/providers/credits_provider.dart';
+import '../../../core/providers/gemstones_provider.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../shared/widgets/enhanced_containers.dart';
 import '../providers/generation_state_providers.dart';
@@ -96,35 +96,37 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       // Try to use UserService first
       final userService = ref.read(userServiceProvider);
 
-      // Check if user has enough credits
-      final currentCredits = await userService.getCredits();
-      if (currentCredits <= 0) {
+      // Check if user has enough gemstones
+      final currentGemstones = await userService.getGemstones();
+      if (currentGemstones <= 0) {
         _showError("You're out of Gemstones!");
         return;
       }
 
-      // Deduct credit before starting generation
-      await userService.deductCredit();
+      // Deduct gemstone before starting generation
+      await userService.deductGemstone();
       await _performGeneration(userService: userService);
     } catch (e) {
-      // Fallback to local credits provider if UserService fails
-      AppLogger.warning('UserService failed, using local credits: $e');
+      // Fallback to local gemstones provider if UserService fails
+      AppLogger.warning('UserService failed, using local gemstones: $e');
 
-      final creditsNotifier = ref.read(userCreditsNotifierProvider.notifier);
+      final gemstonesNotifier = ref.read(
+        userGemstonesNotifierProvider.notifier,
+      );
 
-      // Check if user has enough credits
-      if (!creditsNotifier.deductCredits(1)) {
+      // Check if user has enough gemstones
+      if (!gemstonesNotifier.deductGemstones(1)) {
         _showError("You're out of Gemstones!");
         return;
       }
 
-      await _performGeneration(creditsNotifier: creditsNotifier);
+      await _performGeneration(gemstonesNotifier: gemstonesNotifier);
     }
   }
 
   Future<void> _performGeneration({
     UserService? userService,
-    UserCreditsNotifier? creditsNotifier,
+    UserGemstonesNotifier? gemstonesNotifier,
   }) async {
     setState(() {
       _currentStep = GenerationStep.generating;
@@ -172,11 +174,11 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           _currentStep = GenerationStep.promptInput;
           _isGenerating = false;
         });
-        // Refund credits on failure
+        // Refund gemstones on failure
         if (userService != null) {
-          await userService.addCredits(1);
-        } else if (creditsNotifier != null) {
-          creditsNotifier.addCredits(1);
+          await userService.addGemstones(1);
+        } else if (gemstonesNotifier != null) {
+          gemstonesNotifier.addGemstones(1);
         }
       }
     } catch (e) {
@@ -186,15 +188,15 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         _isGenerating = false;
       });
 
-      // Try to refund credits on error
+      // Try to refund gemstones on error
       try {
         if (userService != null) {
-          await userService.addCredits(1);
-        } else if (creditsNotifier != null) {
-          creditsNotifier.addCredits(1);
+          await userService.addGemstones(1);
+        } else if (gemstonesNotifier != null) {
+          gemstonesNotifier.addGemstones(1);
         }
       } catch (refundError) {
-        AppLogger.error('Failed to refund credit: $refundError');
+        AppLogger.error('Failed to refund gemstone: $refundError');
       }
     } finally {
       _loadingController.stop();
@@ -352,7 +354,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
     try {
       // Get the AssetService
-      final assetService = await ref.read(initAssetServiceProvider.future);
+      final assetService = await ref.read(assetServiceProvider.future);
 
       // Get current user ID
       String userId;
@@ -436,7 +438,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
   @override
   Widget build(BuildContext context) {
     final userCreditsAsync = ref.watch(currentUserGemstonesProvider);
-    final localCredits = ref.watch(totalAvailableCreditsProvider);
+    final localGemstones = ref.watch(totalAvailableGemstonesProvider);
     final isAiAvailable = ref.watch(isAiServiceAvailableProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 800;
@@ -450,7 +452,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
     final isGenerationReady = ref.watch(isGenerationReadyProvider);
 
     return userCreditsAsync.when(
-      data: (totalCredits) => Scaffold(
+      data: (totalGemstones) => Scaffold(
         backgroundColor: AppColors.backgroundPrimary,
         body: Container(
           decoration: BoxDecoration(
@@ -468,13 +470,13 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
             child: Column(
               children: [
                 // Floating Header with Stats
-                _buildFloatingHeader(totalCredits),
+                _buildFloatingHeader(totalGemstones),
 
                 // Main Content Area - Enhanced with state providers
                 Expanded(
                   child: _buildEnhancedProgressiveContent(
                     isAiAvailable,
-                    totalCredits,
+                    totalGemstones,
                     isLargeScreen,
                     selectedCategory,
                     selectedLogoType,
@@ -514,13 +516,13 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
               child: Column(
                 children: [
                   // Floating Header with Stats
-                  _buildFloatingHeader(localCredits),
+                  _buildFloatingHeader(localGemstones),
 
                   // Main Content Area - Enhanced with fallback to existing logic
                   Expanded(
                     child: _buildProgressiveContent(
                       isAiAvailable,
-                      localCredits,
+                      localGemstones,
                       isLargeScreen,
                     ),
                   ),

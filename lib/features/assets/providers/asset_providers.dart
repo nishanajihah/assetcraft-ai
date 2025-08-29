@@ -1,60 +1,78 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/asset_model.dart';
 import '../services/asset_service.dart';
 import '../../../core/database/storage_service.dart';
+import '../../../core/database/web_storage_service.dart';
 
 part 'asset_providers.g.dart';
 
-/// Provider for the AssetService
-@Riverpod(keepAlive: true)
-AssetService assetService(Ref ref) {
-  throw UnimplementedError(
-    'AssetService needs to be initialized asynchronously',
-  );
+/// Provider for the correct StorageService implementation based on platform
+@riverpod
+Future<StorageService> storageService(StorageServiceRef ref) async {
+  if (kIsWeb) {
+    // Return web implementation for web platform
+    return await WebStorageService.create();
+  } else {
+    // Use the factory function for mobile platforms (handles mock vs real storage)
+    return await StorageService.getInstance();
+  }
 }
 
-/// Initialize AssetService asynchronously
+/// Provider for the AssetService
 @riverpod
-Future<AssetService> initAssetService(Ref ref) async {
-  final storage = await StorageService.getInstance();
+Future<AssetService> assetService(AssetServiceRef ref) async {
+  final storage = await ref.watch(storageServiceProvider.future);
   final supabase = Supabase.instance.client;
 
   return AssetService(storage: storage, supabase: supabase);
 }
 
+/// Initialize AssetService asynchronously (deprecated - use assetService instead)
+@Deprecated('Use assetService provider instead')
+@riverpod
+Future<AssetService> initAssetService(InitAssetServiceRef ref) async {
+  return ref.watch(assetServiceProvider.future);
+}
+
 /// Provider for getting all assets as a stream
 @riverpod
-Stream<List<AssetModel>> allAssets(Ref ref) async* {
-  final assetService = await ref.watch(initAssetServiceProvider.future);
+Stream<List<AssetModel>> allAssets(AllAssetsRef ref) async* {
+  final assetService = await ref.watch(assetServiceProvider.future);
   yield* assetService.getAssets();
 }
 
 /// Provider for getting favorite assets as a stream
 @riverpod
-Stream<List<AssetModel>> favoriteAssets(Ref ref) async* {
-  final assetService = await ref.watch(initAssetServiceProvider.future);
+Stream<List<AssetModel>> favoriteAssets(FavoriteAssetsRef ref) async* {
+  final assetService = await ref.watch(assetServiceProvider.future);
   yield* assetService.getFavoriteAssets();
 }
 
 /// Provider for getting assets for a specific user
 @riverpod
-Stream<List<AssetModel>> userAssets(Ref ref, String userId) async* {
-  final assetService = await ref.watch(initAssetServiceProvider.future);
+Stream<List<AssetModel>> userAssets(UserAssetsRef ref, String userId) async* {
+  final assetService = await ref.watch(assetServiceProvider.future);
   yield* assetService.getAssetsForUser(userId);
 }
 
 /// Provider for searching assets
 @riverpod
-Stream<List<AssetModel>> searchAssets(Ref ref, String query) async* {
-  final assetService = await ref.watch(initAssetServiceProvider.future);
+Stream<List<AssetModel>> searchAssets(
+  SearchAssetsRef ref,
+  String query,
+) async* {
+  final assetService = await ref.watch(assetServiceProvider.future);
   yield* assetService.searchAssets(query);
 }
 
 /// Provider for getting assets by tags
 @riverpod
-Stream<List<AssetModel>> assetsByTags(Ref ref, List<String> tags) async* {
-  final assetService = await ref.watch(initAssetServiceProvider.future);
+Stream<List<AssetModel>> assetsByTags(
+  AssetsByTagsRef ref,
+  List<String> tags,
+) async* {
+  final assetService = await ref.watch(assetServiceProvider.future);
   yield* assetService.getAssetsByTags(tags);
 }

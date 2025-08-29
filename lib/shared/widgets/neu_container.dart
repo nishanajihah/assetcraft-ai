@@ -77,7 +77,50 @@ class GlassContainer extends StatelessWidget {
   }
 }
 
-/// Credit display widget
+/// Gemstone display widget
+class GemstonesDisplay extends StatelessWidget {
+  final int gemstones;
+  final bool showBackground;
+
+  const GemstonesDisplay({
+    super.key,
+    required this.gemstones,
+    this.showBackground = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final gemstonesWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.account_balance_wallet,
+          color: AppColors.primaryGold,
+          size: 16,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$gemstones',
+          style: const TextStyle(
+            color: AppColors.primaryGold,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+
+    if (!showBackground) return gemstonesWidget;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: NeuStyles.neuContainer(borderRadius: 20),
+      child: gemstonesWidget,
+    );
+  }
+}
+
+/// Legacy credit display widget for backward compatibility
+@Deprecated('Use GemstonesDisplay instead')
 class CreditDisplay extends StatelessWidget {
   final int credits;
   final bool showBackground;
@@ -90,32 +133,7 @@ class CreditDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final creditWidget = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.account_balance_wallet,
-          color: AppColors.primaryGold,
-          size: 16,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '$credits',
-          style: const TextStyle(
-            color: AppColors.primaryGold,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-
-    if (!showBackground) return creditWidget;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: NeuStyles.neuContainer(borderRadius: 20),
-      child: creditWidget,
-    );
+    return GemstonesDisplay(gemstones: credits, showBackground: showBackground);
   }
 }
 

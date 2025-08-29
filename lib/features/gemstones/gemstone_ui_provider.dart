@@ -14,7 +14,7 @@ class GemstoneStreamNotifier extends _$GemstoneStreamNotifier {
   Stream<int> build() async* {
     final userService = ref.watch(userServiceProvider);
 
-    yield* userService.creditsStream.asyncMap((gemstones) async {
+    yield* userService.gemstonesStream.asyncMap((gemstones) async {
       // Check if daily gemstones were awarded and show notification
       await _checkAndShowDailyGemstonesNotification(userService);
       return gemstones;
@@ -26,8 +26,8 @@ class GemstoneStreamNotifier extends _$GemstoneStreamNotifier {
     UserService userService,
   ) async {
     try {
-      final gemstonesAwarded = userService.lastDailyCreditsAwarded;
-      final totalGemstones = userService.lastDailyCreditsTotal;
+      final gemstonesAwarded = userService.lastDailyGemstonesAwarded;
+      final totalGemstones = userService.lastDailyGemstonesTotal;
 
       if (gemstonesAwarded != null && totalGemstones != null) {
         // Log that gemstones were awarded, but don't show notification here
@@ -37,7 +37,7 @@ class GemstoneStreamNotifier extends _$GemstoneStreamNotifier {
         );
 
         // Clear the notification data so it doesn't show again
-        userService.clearDailyCreditsNotification();
+        userService.clearDailyGemstonesNotification();
       }
     } catch (e) {
       AppLogger.error('Error processing daily gemstones notification: $e');
@@ -95,7 +95,7 @@ class GemstoneStreamNotifier extends _$GemstoneStreamNotifier {
 @riverpod
 Future<int> currentUserGemstones(CurrentUserGemstonesRef ref) async {
   final userService = ref.watch(userServiceProvider);
-  return await userService.getCredits();
+  return await userService.getGemstones();
 }
 
 /// Provider to check for pending daily gemstone notifications
@@ -105,8 +105,8 @@ Future<({int gemstones, int total})?> pendingDailyGemstoneNotification(
 ) async {
   final userService = ref.watch(userServiceProvider);
 
-  final gemstonesAwarded = userService.lastDailyCreditsAwarded;
-  final totalGemstones = userService.lastDailyCreditsTotal;
+  final gemstonesAwarded = userService.lastDailyGemstonesAwarded;
+  final totalGemstones = userService.lastDailyGemstonesTotal;
 
   if (gemstonesAwarded != null && totalGemstones != null) {
     return (gemstones: gemstonesAwarded, total: totalGemstones);
@@ -131,7 +131,7 @@ void checkAndShowDailyGemstoneNotification(
 
         // Clear the notification after showing it
         final userService = ref.read(userServiceProvider);
-        userService.clearDailyCreditsNotification();
+        userService.clearDailyGemstonesNotification();
 
         AppLogger.info(
           'Showed daily gemstone notification: +${notification.gemstones}',

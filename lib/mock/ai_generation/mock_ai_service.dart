@@ -7,7 +7,7 @@ import '../../core/utils/app_logger.dart';
 /// Mock AI service for testing and development
 ///
 /// This service provides fake AI image generation without requiring
-/// actual API calls or credits. Useful for development and testing.
+/// actual API calls or gemstones. Useful for development and testing.
 class MockAIService {
   static const bool isEnabled = true;
 

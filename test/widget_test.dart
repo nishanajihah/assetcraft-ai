@@ -30,7 +30,7 @@ void main() {
       // Verify that bottom navigation exists
       expect(find.text('Generate'), findsOneWidget);
       expect(find.text('Library'), findsOneWidget);
-      expect(find.text('Credits'), findsOneWidget);
+      expect(find.text('Gemstones'), findsOneWidget);
 
       // Verify that the Generate tab is selected by default
       expect(find.text('Create Asset'), findsOneWidget);
@@ -51,12 +51,12 @@ void main() {
       expect(find.text('Asset Library'), findsOneWidget);
       expect(find.text('No Assets Yet'), findsOneWidget);
 
-      // Tap on Credits tab
-      await tester.tap(find.text('Credits'));
+      // Tap on Gemstones tab
+      await tester.tap(find.text('Gemstones'));
       await tester.pumpAndSettle();
 
-      // Verify Credits screen is shown
-      expect(find.text('Credits & Plans'), findsOneWidget);
+      // Verify Gemstones screen is shown
+      expect(find.text('Gemstones & Plans'), findsOneWidget);
       expect(find.text('Current Balance'), findsOneWidget);
     });
 
@@ -92,17 +92,17 @@ void main() {
       // which is more complex in widget tests
     });
 
-    testWidgets('Credits screen shows pricing information', (
+    testWidgets('Gemstones screen shows pricing information', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const ProviderScope(child: AssetCraftApp()));
       await tester.pumpAndSettle();
 
-      // Navigate to Credits tab
-      await tester.tap(find.text('Credits'));
+      // Navigate to Gemstones tab
+      await tester.tap(find.text('Gemstones'));
       await tester.pumpAndSettle();
 
-      // Verify credit packs are shown
+      // Verify gemstone packs are shown
       expect(find.text('Starter Pack'), findsOneWidget);
       expect(find.text('Creator Pack'), findsOneWidget);
       expect(find.text('Pro Pack'), findsOneWidget);

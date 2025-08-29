@@ -695,7 +695,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         // Add gemstones to user account
         if (result.gemstonesReceived != null && result.gemstonesReceived! > 0) {
           final userService = ref.read(userServiceProvider);
-          await userService.addCredits(result.gemstonesReceived!);
+          await userService.addGemstones(result.gemstonesReceived!);
         }
 
         // Show success message

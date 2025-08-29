@@ -49,10 +49,10 @@ class AppColors {
   static const Color backgroundSecondary = Color(0xFFF8F8F8);
   static const Color backgroundCard = Color(0xFFFFFFFF);
 
-  // Credit system colors (light mode)
-  static const Color creditGold = primaryGold;
-  static const Color creditBackground = Color(0xFFF5F5F5);
-  static const Color creditBorder = Color(0xFFE0E0E0);
+  // Gemstone system colors (light mode)
+  static const Color gemstoneGold = primaryGold;
+  static const Color gemstoneBackground = Color(0xFFF5F5F5);
+  static const Color gemstoneBorder = Color(0xFFE0E0E0);
 }
 
 /// Material Theme Configuration

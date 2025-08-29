@@ -1,120 +1,121 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
 import 'notification_service.dart';
 
 part 'user_service.g.dart';
 
-/// Service for managing user-related operations like credits
+/// Service for managing user-related operations like gemstones
 class UserService {
   final SupabaseClient _supabase;
   final NotificationService _notificationService;
-
-  // Stream controller for credit changes
-  StreamController<int>? _creditsController;
   Timer? _dailyCheckTimer;
 
-  // Track daily credits for in-app notifications
-  int? _lastDailyCreditsAwarded;
-  int? _lastDailyCreditsTotal;
+  // Stream controller for gemstone changes
+  StreamController<int>? _gemstonesController;
+
+  // Track daily gemstones for in-app notifications
+  int? _lastDailyGemstonesAwarded;
+  int? _lastDailyGemstonesTotal;
+
   UserService(this._supabase, this._notificationService) {
-    _setupDailyCreditsCheck();
+    _setupDailyGemstonesCheck();
   }
 
-  /// Setup automatic daily credits check
-  void _setupDailyCreditsCheck() {
-    // Check for daily credits every hour
+  /// Setup automatic daily gemstones check
+  void _setupDailyGemstonesCheck() {
+    // Check for daily gemstones every hour
     _dailyCheckTimer = Timer.periodic(
       const Duration(hours: 1),
-      (_) => _checkAndAwardDailyCredits(),
+      (_) => _checkAndAwardDailyGemstones(),
     );
 
-    // Also check immediately on service creation
-    _checkAndAwardDailyCredits();
+    // Initial check
+    _checkAndAwardDailyGemstones();
   }
 
-  /// Check if user should receive daily credits and award them
-  Future<void> _checkAndAwardDailyCredits() async {
+  /// Check if user should receive daily gemstones and award them
+  Future<void> _checkAndAwardDailyGemstones() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      // Get user's last daily credit claim from Supabase
+      // Get user's last daily gemstone claim from Supabase
       final response = await _supabase
           .from('users')
-          .select('credits, last_daily_credit_claim')
+          .select('gemstones, last_daily_gemstone_claim')
           .eq('id', user.id)
           .single();
 
-      final currentCredits = response['credits'] as int? ?? 0;
-      final lastClaimStr = response['last_daily_credit_claim'] as String?;
-
-      DateTime? lastClaim;
-      if (lastClaimStr != null) {
-        lastClaim = DateTime.tryParse(lastClaimStr);
-      }
+      final currentGemstones = response['gemstones'] as int? ?? 0;
+      final lastClaimStr = response['last_daily_gemstone_claim'] as String?;
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // Check if user hasn't claimed today
-      bool shouldAwardCredits = false;
-      if (lastClaim == null) {
-        shouldAwardCredits = true; // First time user
-      } else {
-        final lastClaimDate = DateTime(
-          lastClaim.year,
-          lastClaim.month,
-          lastClaim.day,
+      DateTime? lastClaimDate;
+      if (lastClaimStr != null) {
+        lastClaimDate = DateTime.parse(lastClaimStr);
+        lastClaimDate = DateTime(
+          lastClaimDate.year,
+          lastClaimDate.month,
+          lastClaimDate.day,
         );
-        shouldAwardCredits = today.isAfter(lastClaimDate);
       }
 
-      if (shouldAwardCredits) {
-        const dailyCredits = 5; // Award 5 daily gemstones
-        final newTotal = currentCredits + dailyCredits;
+      bool shouldAwardGemstones = false;
+      if (lastClaimDate == null) {
+        shouldAwardGemstones = true; // First time user
+      } else {
+        // Award if it's a new day since last claim
+        // lastClaimDate is start of that day, today is start of today
+        // Award if today is after the last claim date
+        shouldAwardGemstones = today.isAfter(lastClaimDate);
+      }
 
-        // Update user's credits and last claim date
+      if (shouldAwardGemstones) {
+        const dailyGemstones = 5; // Award 5 daily gemstones
+        final newTotal = currentGemstones + dailyGemstones;
+
+        // Update user's gemstones and last claim date
         await _supabase
             .from('users')
             .update({
-              'credits': newTotal,
-              'last_daily_credit_claim': now.toIso8601String(),
+              'gemstones': newTotal,
+              'last_daily_gemstone_claim': now.toIso8601String(),
             })
             .eq('id', user.id);
 
         AppLogger.info(
-          '🎁 Awarded $dailyCredits daily credits. Total: $newTotal',
+          '🎁 Awarded $dailyGemstones daily gemstones. Total: $newTotal',
         );
 
-        // Send notification about daily credits
-        await _notificationService.sendDailyCreditNotification(
-          creditsReceived: dailyCredits,
-          totalCredits: newTotal,
+        // Send notification about daily gemstones
+        await _notificationService.sendDailyGemstoneNotification(
+          gemstonesReceived: dailyGemstones,
+          totalGemstones: newTotal,
         );
 
-        // Store for in-app notification
-        _lastDailyCreditsAwarded = dailyCredits;
-        _lastDailyCreditsTotal = newTotal;
+        // Store for in-app notifications
+        _lastDailyGemstonesAwarded = dailyGemstones;
+        _lastDailyGemstonesTotal = newTotal;
 
-        // Notify listeners about credit change
-        _creditsController?.add(newTotal);
+        // Notify listeners about gemstone change
+        _gemstonesController?.add(newTotal);
       }
     } catch (e) {
-      AppLogger.error('❌ Error checking daily credits: $e');
+      AppLogger.error('❌ Error checking daily gemstones: $e');
     }
   }
 
-  /// Dispose resources
   void dispose() {
-    _creditsController?.close();
     _dailyCheckTimer?.cancel();
+    _gemstonesController?.close();
   }
 
-  /// Fetches the current credit count from the 'public.users' Supabase table for the signed-in user
-  Future<int> getCredits() async {
+  /// Fetches the current gemstone count from the 'public.users' Supabase table for the signed-in user
+  Future<int> getGemstones() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -123,84 +124,84 @@ class UserService {
 
       final response = await _supabase
           .from('users')
-          .select('credits')
+          .select('gemstones')
           .eq('id', user.id)
           .single();
 
-      return response['credits'] as int? ?? 0;
+      return response['gemstones'] as int? ?? 0;
     } catch (e) {
-      throw Exception('Failed to fetch credits: $e');
+      throw Exception('Failed to fetch gemstones: $e');
     }
   }
 
-  /// Decrements the credit count by one in the 'public.users' table for the signed-in user
-  Future<void> deductCredit() async {
+  /// Decrements the gemstone count by one in the 'public.users' table for the signed-in user
+  Future<void> deductGemstone() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
 
-      // First get current credits
-      final currentCredits = await getCredits();
+      // First get current gemstones
+      final currentGemstones = await getGemstones();
 
-      if (currentCredits <= 0) {
-        throw Exception('Insufficient credits');
+      if (currentGemstones <= 0) {
+        throw Exception('Insufficient gemstones');
       }
 
-      final newTotal = currentCredits - 1;
+      final newTotal = currentGemstones - 1;
 
-      // Deduct one credit
+      // Deduct one gemstone
       await _supabase
           .from('users')
-          .update({'credits': newTotal})
+          .update({'gemstones': newTotal})
           .eq('id', user.id);
 
-      // Notify listeners about credit change
-      _creditsController?.add(newTotal);
+      // Notify listeners about gemstone change
+      _gemstonesController?.add(newTotal);
 
-      // Check if user is running low on credits and send notification
-      if (newTotal <= 3) {
-        await _notificationService.sendLowCreditsNotification(
-          remainingCredits: newTotal,
+      // Check if user is running low on gemstones and send notification
+      if (newTotal <= 2) {
+        await _notificationService.sendLowGemstonesNotification(
+          remainingGemstones: newTotal,
         );
       }
 
-      AppLogger.info('💎 Deducted 1 credit. Remaining: $newTotal');
+      AppLogger.info('💎 Deducted 1 gemstone. Remaining: $newTotal');
     } catch (e) {
-      throw Exception('Failed to deduct credit: $e');
+      throw Exception('Failed to deduct gemstone: $e');
     }
   }
 
-  /// Adds credits to the user's account
-  Future<void> addCredits(int amount) async {
+  /// Adds gemstones to the user's account
+  Future<void> addGemstones(int amount) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
 
-      // Get current credits
-      final currentCredits = await getCredits();
-      final newTotal = currentCredits + amount;
+      // Get current gemstones
+      final currentGemstones = await getGemstones();
+      final newTotal = currentGemstones + amount;
 
-      // Add credits
+      // Add gemstones
       await _supabase
           .from('users')
-          .update({'credits': newTotal})
+          .update({'gemstones': newTotal})
           .eq('id', user.id);
 
-      // Notify listeners about credit change
-      _creditsController?.add(newTotal);
+      // Notify listeners about gemstone change
+      _gemstonesController?.add(newTotal);
 
-      AppLogger.info('💎 Added $amount credits. New total: $newTotal');
+      AppLogger.info('💎 Added $amount gemstones. New total: $newTotal');
     } catch (e) {
-      throw Exception('Failed to add credits: $e');
+      throw Exception('Failed to add gemstones: $e');
     }
   }
 
-  /// Updates the credit count to a specific value
-  Future<void> updateCredits(int newAmount) async {
+  /// Updates the gemstone count to a specific value
+  Future<void> updateGemstones(int newAmount) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -209,71 +210,100 @@ class UserService {
 
       await _supabase
           .from('users')
-          .update({'credits': newAmount})
+          .update({'gemstones': newAmount})
           .eq('id', user.id);
 
-      // Notify listeners about credit change
-      _creditsController?.add(newAmount);
+      // Notify listeners about gemstone change
+      _gemstonesController?.add(newAmount);
 
-      AppLogger.info('💎 Updated credits to: $newAmount');
+      AppLogger.info('💎 Updated gemstones to: $newAmount');
     } catch (e) {
-      throw Exception('Failed to update credits: $e');
+      throw Exception('Failed to update gemstones: $e');
     }
   }
 
-  /// Stream of credit changes
-  Stream<int> get creditsStream {
-    _creditsController ??= StreamController<int>.broadcast();
+  /// Stream of gemstone changes
+  Stream<int> get gemstonesStream {
+    _gemstonesController ??= StreamController<int>.broadcast();
 
-    // Emit current credits when someone subscribes
-    getCredits()
-        .then((credits) {
-          if (!_creditsController!.isClosed) {
-            _creditsController!.add(credits);
+    // Emit current gemstones when someone subscribes
+    getGemstones()
+        .then((gemstones) {
+          if (!_gemstonesController!.isClosed) {
+            _gemstonesController!.add(gemstones);
           }
         })
         .catchError((e) {
-          AppLogger.error('Error getting initial credits for stream: $e');
+          AppLogger.error('Error getting initial gemstones for stream: $e');
         });
 
-    return _creditsController!.stream;
+    return _gemstonesController!.stream;
   }
 
-  /// Manually trigger daily credits check (for testing)
-  Future<void> checkDailyCredits() async {
-    await _checkAndAwardDailyCredits();
+  /// Manually trigger daily gemstones check (for testing)
+  Future<void> checkDailyGemstones() async {
+    await _checkAndAwardDailyGemstones();
   }
 
-  /// Get the last daily credits awarded (for in-app notifications)
-  int? get lastDailyCreditsAwarded => _lastDailyCreditsAwarded;
+  /// Get the last daily gemstones awarded (for in-app notifications)
+  int? get lastDailyGemstonesAwarded => _lastDailyGemstonesAwarded;
 
-  /// Get the total credits after last daily award (for in-app notifications)
-  int? get lastDailyCreditsTotal => _lastDailyCreditsTotal;
+  /// Get the last daily gemstones total (for in-app notifications)
+  int? get lastDailyGemstonesTotal => _lastDailyGemstonesTotal;
 
-  /// Clear the daily credits notification data
-  void clearDailyCreditsNotification() {
-    _lastDailyCreditsAwarded = null;
-    _lastDailyCreditsTotal = null;
+  /// Clear the daily gemstones notification flag
+  void clearDailyGemstonesNotification() {
+    _lastDailyGemstonesAwarded = null;
+    _lastDailyGemstonesTotal = null;
   }
+
+  // Legacy methods for backward compatibility (will be removed)
+  @Deprecated('Use getGemstones() instead')
+  Future<int> getCredits() => getGemstones();
+
+  @Deprecated('Use deductGemstone() instead')
+  Future<void> deductCredit() => deductGemstone();
+
+  @Deprecated('Use addGemstones() instead')
+  Future<void> addCredits(int amount) => addGemstones(amount);
+
+  @Deprecated('Use updateGemstones() instead')
+  Future<void> updateCredits(int newAmount) => updateGemstones(newAmount);
+
+  @Deprecated('Use gemstonesStream instead')
+  Stream<int> get creditsStream => gemstonesStream;
+
+  @Deprecated('Use checkDailyGemstones() instead')
+  Future<void> checkDailyCredits() => checkDailyGemstones();
+
+  @Deprecated('Use lastDailyGemstonesAwarded instead')
+  int? get lastDailyCreditsAwarded => lastDailyGemstonesAwarded;
+
+  @Deprecated('Use lastDailyGemstonesTotal instead')
+  int? get lastDailyCreditsTotal => lastDailyGemstonesTotal;
+
+  @Deprecated('Use clearDailyGemstonesNotification() instead')
+  void clearDailyCreditsNotification() => clearDailyGemstonesNotification();
 }
 
-/// Riverpod Provider that exposes the UserService
+/// Provider for UserService
 @riverpod
-UserService userService(Ref ref) {
-  final notificationService = ref.watch(notificationServiceProvider);
-  return UserService(Supabase.instance.client, notificationService);
+UserService userService(UserServiceRef ref) {
+  final supabase = Supabase.instance.client;
+  final notificationService = ref.read(notificationServiceProvider);
+  return UserService(supabase, notificationService);
 }
 
-/// Provider for getting current user credits (Future-based)
+/// Provider for user's current gemstone count
 @riverpod
-Future<int> userCredits(Ref ref) async {
-  final userService = ref.watch(userServiceProvider);
-  return await userService.getCredits();
+Future<int> userGemstones(UserGemstonesRef ref) async {
+  final userService = ref.read(userServiceProvider);
+  return await userService.getGemstones();
 }
 
-/// Provider for streaming user credits (Stream-based)
+/// Provider for user's gemstone stream
 @riverpod
-Stream<int> userCreditsStream(Ref ref) {
-  final userService = ref.watch(userServiceProvider);
-  return userService.creditsStream;
+Stream<int> userGemstonesStream(UserGemstonesStreamRef ref) {
+  final userService = ref.read(userServiceProvider);
+  return userService.gemstonesStream;
 }

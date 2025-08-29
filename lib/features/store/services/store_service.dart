@@ -55,12 +55,12 @@ class StoreService {
 
         // Update user's gemstones in the database
         if (gemstonesReceived > 0) {
-          await _userService.addCredits(gemstonesReceived);
+          await _userService.addGemstones(gemstonesReceived);
 
           // Send success notification
           await _notificationService.sendPurchaseSuccessNotification(
             gemstonesReceived: gemstonesReceived,
-            totalGemstones: await _userService.getCredits(),
+            totalGemstones: await _userService.getGemstones(),
           );
 
           AppLogger.info(

@@ -1,32 +1,32 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'credits_provider.g.dart';
+part 'gemstones_provider.g.dart';
 
-/// User credits state management
+/// User gemstones state management
 ///
-/// This provider manages the user's "Gemstone" credits for AI generation.
+/// This provider manages the user's "Gemstone" currency for AI generation.
 /// Currently uses a simple state provider, but can be extended to integrate
 /// with local storage, cloud sync, and payment systems.
-class UserCredits {
+class UserGemstones {
   final int current;
   final int daily;
   final DateTime lastDailyReset;
 
-  const UserCredits({
+  const UserGemstones({
     required this.current,
     required this.daily,
     required this.lastDailyReset,
   });
 
-  UserCredits copyWith({int? current, int? daily, DateTime? lastDailyReset}) {
-    return UserCredits(
+  UserGemstones copyWith({int? current, int? daily, DateTime? lastDailyReset}) {
+    return UserGemstones(
       current: current ?? this.current,
       daily: daily ?? this.daily,
       lastDailyReset: lastDailyReset ?? this.lastDailyReset,
     );
   }
 
-  /// Check if daily credits need to be reset
+  /// Check if daily gemstones need to be reset
   bool get needsDailyReset {
     final now = DateTime.now();
     final resetDate = DateTime(
@@ -38,46 +38,46 @@ class UserCredits {
     return today.isAfter(resetDate);
   }
 
-  /// Total available credits (current + daily if available)
+  /// Total available gemstones (current + daily if available)
   int get totalAvailable {
     if (needsDailyReset) {
-      return current + 5; // 5 daily credits from constants
+      return current + 5; // 5 daily gemstones from constants
     }
     return current + daily;
   }
 }
 
-/// Credits state provider
+/// Gemstones state provider
 @riverpod
-class UserCreditsNotifier extends _$UserCreditsNotifier {
+class UserGemstonesNotifier extends _$UserGemstonesNotifier {
   @override
-  UserCredits build() {
-    // Initialize with some demo credits
+  UserGemstones build() {
+    // Initialize with some demo gemstones
     // In a real app, this would load from local storage or API
-    return UserCredits(
-      current: 25, // Starting credits
-      daily: 5, // Daily free credits
+    return UserGemstones(
+      current: 25, // Starting gemstones
+      daily: 5, // Daily free gemstones
       lastDailyReset: DateTime.now().subtract(
         const Duration(days: 1),
       ), // Needs reset
     );
   }
 
-  /// Deduct credits for AI generation
-  bool deductCredits(int amount) {
-    final credits = state;
+  /// Deduct gemstones for AI generation
+  bool deductGemstones(int amount) {
+    final gemstones = state;
 
     // Check if daily reset is needed
-    if (credits.needsDailyReset) {
-      state = credits.copyWith(
-        daily: 5, // Reset daily credits
+    if (gemstones.needsDailyReset) {
+      state = gemstones.copyWith(
+        daily: 5, // Reset daily gemstones
         lastDailyReset: DateTime.now(),
       );
     }
 
     final updated = state;
     if (updated.totalAvailable >= amount) {
-      // First use daily credits, then current credits
+      // First use daily gemstones, then current gemstones
       int newDaily = updated.daily;
       int newCurrent = updated.current;
       int remaining = amount;
@@ -98,20 +98,20 @@ class UserCreditsNotifier extends _$UserCreditsNotifier {
     return false;
   }
 
-  /// Add credits (from purchases, rewards, etc.)
-  void addCredits(int amount) {
+  /// Add gemstones (from purchases, rewards, etc.)
+  void addGemstones(int amount) {
     state = state.copyWith(current: state.current + amount);
   }
 
-  /// Reset daily credits manually
-  void resetDailyCredits() {
+  /// Reset daily gemstones manually
+  void resetDailyGemstones() {
     state = state.copyWith(daily: 5, lastDailyReset: DateTime.now());
   }
 }
 
-/// Provider for total available credits (read-only)
+/// Provider for total available gemstones (read-only)
 @riverpod
-int totalAvailableCredits(TotalAvailableCreditsRef ref) {
-  final credits = ref.watch(userCreditsNotifierProvider);
-  return credits.totalAvailable;
+int totalAvailableGemstones(TotalAvailableGemstonesRef ref) {
+  final gemstones = ref.watch(userGemstonesNotifierProvider);
+  return gemstones.totalAvailable;
 }
