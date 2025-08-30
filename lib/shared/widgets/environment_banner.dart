@@ -10,9 +10,12 @@ class EnvironmentBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Only show in development or staging, hidden in production
-    if (Environment.isProduction) {
-      return child;
+    // Always show for developers, but in production it can be hidden for users
+    // can add a build flag here to hide in user releases
+    const bool showForUsers = false; // Set to false for app store releases
+
+    if (Environment.isProduction && !showForUsers) {
+      return child; // Hide for end users in production
     }
 
     return Stack(
@@ -22,9 +25,76 @@ class EnvironmentBanner extends StatelessWidget {
         Positioned(
           top: 40, // Below status bar
           right: 10,
-          child: _EnvironmentChip(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _EnvironmentChip(),
+              const SizedBox(height: 4),
+              _MockStatusChip(),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _MockStatusChip extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final bool anyMockEnabled =
+        Environment.enableMockAI ||
+        Environment.enableMockStore ||
+        Environment.enableMockAuth ||
+        Environment.enableMockNotifications ||
+        Environment.enableMockStorage;
+
+    return SafeArea(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: anyMockEnabled
+                ? Colors.purple.shade600.withValues(alpha: 0.9)
+                : Colors.green.shade600.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: anyMockEnabled
+                  ? Colors.purple.shade600
+                  : Colors.green.shade600,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                anyMockEnabled ? Icons.science : Icons.verified,
+                size: 12,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                anyMockEnabled ? 'MOCK' : 'REAL',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
