@@ -114,6 +114,74 @@ class UserService {
     _gemstonesController?.close();
   }
 
+  /// Log out the current user
+  Future<void> logout() async {
+    try {
+      AppLogger.info('🚪 Logging out user');
+
+      // Sign out from Supabase
+      await _supabase.auth.signOut();
+
+      // Cancel timers and clean up
+      _dailyCheckTimer?.cancel();
+      _gemstonesController?.close();
+
+      AppLogger.info('✅ User logged out successfully');
+    } catch (e) {
+      AppLogger.error('❌ Error during logout: $e');
+      throw Exception('Failed to logout: $e');
+    }
+  }
+
+  /// Delete the current user account
+  /// This method calls a Supabase Edge Function to securely delete the user account
+  /// and all associated data (assets, profile info, etc.)
+  Future<void> deleteAccount() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      AppLogger.info('🗑️ Deleting user account: ${user.email}');
+
+      // Call Supabase Edge Function to delete user account and all associated data
+      // This is the secure way to delete user accounts from the server side
+      final response = await _supabase.functions.invoke(
+        'delete-user-account',
+        body: {'user_id': user.id},
+      );
+
+      if (response.status != 200) {
+        throw Exception('Server error: ${response.status}');
+      }
+
+      // Clean up local resources
+      _dailyCheckTimer?.cancel();
+      _gemstonesController?.close();
+
+      AppLogger.info('✅ User account deleted successfully');
+    } catch (e) {
+      AppLogger.error('❌ Error deleting account: $e');
+
+      // Provide more specific error messages
+      if (e.toString().contains('not found') || e.toString().contains('404')) {
+        throw Exception(
+          'Account deletion service is not available. Please contact support.',
+        );
+      } else if (e.toString().contains('network') ||
+          e.toString().contains('connection')) {
+        throw Exception(
+          'Network error. Please check your connection and try again.',
+        );
+      } else {
+        throw Exception(
+          'Failed to delete account: ${e.toString().replaceAll('Exception: ', '')}',
+        );
+      }
+    }
+  }
+
   /// Fetches the current gemstone count from the 'public.users' Supabase table for the signed-in user
   Future<int> getGemstones() async {
     try {
@@ -239,6 +307,9 @@ class UserService {
 
     return _gemstonesController!.stream;
   }
+
+  /// Get current authenticated user
+  User? get currentUser => _supabase.auth.currentUser;
 
   /// Manually trigger daily gemstones check (for testing)
   Future<void> checkDailyGemstones() async {
