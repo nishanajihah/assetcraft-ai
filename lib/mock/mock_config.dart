@@ -1,6 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import '../core/utils/app_logger.dart';
+import '../core/config/environment.dart';
 
 /// Centralized mock configuration service
 /// Manages all mock/testing flags from environment variables
@@ -59,46 +60,31 @@ class MockConfig {
 
   /// AI Generation Mock
   static bool get isMockAiEnabled {
-    _mockAiEnabled ??= _getBoolValue(
-      'ENABLE_MOCK_AI',
-      defaultValue: isMockModeEnabled,
-    );
+    _mockAiEnabled ??= Environment.enableMockAI;
     return _mockAiEnabled!;
   }
 
   /// Storage Mock (in-memory instead of Isar)
   static bool get isMockStorageEnabled {
-    _mockStorageEnabled ??= _getBoolValue(
-      'ENABLE_MOCK_STORAGE',
-      defaultValue: isMockModeEnabled,
-    );
+    _mockStorageEnabled ??= Environment.enableMockStorage;
     return _mockStorageEnabled!;
   }
 
   /// Store/Purchases Mock
   static bool get isMockStoreEnabled {
-    _mockStoreEnabled ??= _getBoolValue(
-      'ENABLE_MOCK_STORE',
-      defaultValue: isMockModeEnabled,
-    );
+    _mockStoreEnabled ??= Environment.enableMockStore;
     return _mockStoreEnabled!;
   }
 
   /// Notifications Mock
   static bool get isMockNotificationsEnabled {
-    _mockNotificationsEnabled ??= _getBoolValue(
-      'ENABLE_MOCK_NOTIFICATIONS',
-      defaultValue: isMockModeEnabled,
-    );
+    _mockNotificationsEnabled ??= Environment.enableMockNotifications;
     return _mockNotificationsEnabled!;
   }
 
   /// Authentication Mock
   static bool get isMockAuthEnabled {
-    _mockAuthEnabled ??= _getBoolValue(
-      'ENABLE_MOCK_AUTH',
-      defaultValue: isMockModeEnabled,
-    );
+    _mockAuthEnabled ??= Environment.enableMockAuth;
     return _mockAuthEnabled!;
   }
 

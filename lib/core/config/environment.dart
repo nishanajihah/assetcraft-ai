@@ -6,39 +6,12 @@ import '../utils/app_logger.dart';
 class Environment {
   /// Initialize environment from .env files
   static Future<void> initialize() async {
-    // Determine which .env file to load based on environment
-    String envFile = '.env'; // default
-
-    // Check if specific environment is set
-    const String envStage = String.fromEnvironment(
-      'ENVIRONMENT',
-      defaultValue: 'production',
-    );
-
-    switch (envStage) {
-      case 'development':
-        envFile = '.env.development';
-        break;
-      case 'staging':
-        envFile = '.env.staging';
-        break;
-      case 'production':
-      default:
-        envFile = '.env.production';
-        break;
-    }
-
     try {
-      await dotenv.load(fileName: envFile);
-      // Use safePrint during initialization since AppLogger might not be ready
-      AppLogger.safePrint('✅ Loaded environment from $envFile');
+      // Always load the main .env file (this is what you modify)
+      await dotenv.load(fileName: '.env');
+      AppLogger.safePrint('✅ Loaded environment from .env');
     } catch (e) {
-      AppLogger.safePrint('⚠️ Could not load $envFile, falling back to .env');
-      try {
-        await dotenv.load(fileName: '.env');
-      } catch (e) {
-        AppLogger.safePrint('❌ Could not load .env file: $e');
-      }
+      AppLogger.safePrint('❌ Could not load .env file: $e');
     }
   }
 
@@ -117,8 +90,57 @@ class Environment {
       paddleVendorId.isNotEmpty && paddleApiKey.isNotEmpty;
 
   /// Feature flags from .env files
-  static bool get enableMockAI =>
-      dotenv.get('ENABLE_MOCK_AI', fallback: 'false').toLowerCase() == 'true';
+
+  // 🧪 SMART MOCK SYSTEM
+  // Development = Mock by default, Production = Real by default
+  // But you can override with FORCE_MOCK_* variables
+
+  static bool get enableMockAI {
+    final forceOverride = dotenv.get('FORCE_MOCK_AI', fallback: '');
+    if (forceOverride.isNotEmpty) {
+      return forceOverride.toLowerCase() == 'true';
+    }
+    // Default: Development = true, Production = false
+    return isDevelopment;
+  }
+
+  static bool get enableMockStore {
+    final forceOverride = dotenv.get('FORCE_MOCK_STORE', fallback: '');
+    if (forceOverride.isNotEmpty) {
+      return forceOverride.toLowerCase() == 'true';
+    }
+    // Default: Development = true, Production = false
+    return isDevelopment;
+  }
+
+  static bool get enableMockAuth {
+    final forceOverride = dotenv.get('FORCE_MOCK_AUTH', fallback: '');
+    if (forceOverride.isNotEmpty) {
+      return forceOverride.toLowerCase() == 'true';
+    }
+    // Default: Development = true, Production = false
+    return isDevelopment;
+  }
+
+  static bool get enableMockNotifications {
+    final forceOverride = dotenv.get('FORCE_MOCK_NOTIFICATIONS', fallback: '');
+    if (forceOverride.isNotEmpty) {
+      return forceOverride.toLowerCase() == 'true';
+    }
+    // Default: Development = true, Production = false
+    return isDevelopment;
+  }
+
+  static bool get enableMockStorage {
+    final forceOverride = dotenv.get('FORCE_MOCK_STORAGE', fallback: '');
+    if (forceOverride.isNotEmpty) {
+      return forceOverride.toLowerCase() == 'true';
+    }
+    // Default: Development = true, Production = false
+    return isDevelopment;
+  }
+
+  // Other feature flags
   static bool get enablePushNotifications =>
       dotenv.get('ENABLE_PUSH_NOTIFICATIONS', fallback: 'true').toLowerCase() ==
       'true';
@@ -132,9 +154,9 @@ class Environment {
       dotenv.get('ENABLE_PREMIUM_FEATURES', fallback: 'true').toLowerCase() ==
       'true';
   static bool get enableAds =>
-      dotenv.get('ENABLE_ADS', fallback: 'true').toLowerCase() == 'true';
+      dotenv.get('ENABLE_ADS', fallback: 'false').toLowerCase() == 'true';
   static bool get enableAnalytics =>
-      dotenv.get('ENABLE_ANALYTICS', fallback: 'false').toLowerCase() == 'true';
+      dotenv.get('ENABLE_ANALYTICS', fallback: 'true').toLowerCase() == 'true';
   static bool get enableSplashScreen =>
       dotenv.get('ENABLE_SPLASH_SCREEN', fallback: 'true').toLowerCase() ==
       'true';
@@ -144,19 +166,42 @@ class Environment {
 
   /// Debug helper
   static void printConfig() {
-    if (isDevelopment) {
-      AppLogger.debug('🔧 Environment Configuration:');
-      AppLogger.debug('  Stage: $currentStage');
-      AppLogger.debug('  API URL: $baseApiUrl');
-      AppLogger.debug('  Supabase: ${hasSupabaseConfig ? "✅" : "❌"}');
-      AppLogger.debug('  RevenueCat: ${hasRevenueCatConfig ? "✅" : "❌"}');
-      AppLogger.debug('  OneSignal: ${hasOneSignalConfig ? "✅" : "❌"}');
-      AppLogger.debug('  Gemini: ${hasGeminiConfig ? "✅" : "❌"}');
-      AppLogger.debug('  Google Cloud: ${hasGoogleCloudConfig ? "✅" : "❌"}');
-      AppLogger.debug('  Paddle: ${hasPaddleConfig ? "✅" : "❌"}');
-      AppLogger.debug('  Mock AI: $enableMockAI');
-      AppLogger.debug('  Push Notifications: $enablePushNotifications');
-      AppLogger.debug('  Analytics: $enableAnalytics');
-    }
+    // Only print config in development to reduce startup overhead
+    if (!isDevelopment) return;
+
+    AppLogger.debug('🔧 Environment Configuration:');
+    AppLogger.debug('  🎯 Stage: $currentStage');
+    AppLogger.debug('  🌐 API URL: $baseApiUrl');
+    AppLogger.debug('  🔑 Supabase: ${hasSupabaseConfig ? "✅" : "❌"}');
+    AppLogger.debug('  💰 RevenueCat: ${hasRevenueCatConfig ? "✅" : "❌"}');
+    AppLogger.debug('  🔔 OneSignal: ${hasOneSignalConfig ? "✅" : "❌"}');
+    AppLogger.debug('  🤖 Gemini: ${hasGeminiConfig ? "✅" : "❌"}');
+    AppLogger.debug('  ☁️ Google Cloud: ${hasGoogleCloudConfig ? "✅" : "❌"}');
+    AppLogger.debug('  🏪 Paddle: ${hasPaddleConfig ? "✅" : "❌"}');
+    AppLogger.debug('  🧪 Mock AI: ${enableMockAI ? "✅" : "❌"}');
+    AppLogger.debug('  🧪 Mock Store: ${enableMockStore ? "✅" : "❌"}');
+    AppLogger.debug('  🧪 Mock Auth: ${enableMockAuth ? "✅" : "❌"}');
+    AppLogger.debug(
+      '  🧪 Mock Notifications: ${enableMockNotifications ? "✅" : "❌"}',
+    );
+    AppLogger.debug('  🧪 Mock Storage: ${enableMockStorage ? "✅" : "❌"}');
+    AppLogger.debug('  📊 Analytics: ${enableAnalytics ? "✅" : "❌"}');
+  }
+
+  /// Get status for UI display
+  static String get environmentStatus {
+    return isDevelopment ? '🔧 DEV' : '🚀 PROD';
+  }
+
+  static String get mockStatus {
+    List<String> mocks = [];
+    if (enableMockAI) mocks.add('AI');
+    if (enableMockStore) mocks.add('Store');
+    if (enableMockAuth) mocks.add('Auth');
+    if (enableMockNotifications) mocks.add('Notif');
+    if (enableMockStorage) mocks.add('Storage');
+
+    if (mocks.isEmpty) return '🔴 Real Data';
+    return '🧪 Mock: ${mocks.join(', ')}';
   }
 }
