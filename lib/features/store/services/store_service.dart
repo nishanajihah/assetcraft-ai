@@ -6,6 +6,7 @@ import '../../../core/utils/app_logger.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../mock/mock_config.dart';
+import '../../../mock/store/mock_store_service.dart';
 
 part 'store_service.g.dart';
 
@@ -40,6 +41,11 @@ class StoreService {
 
   /// Purchase a package and handle all the logic
   Future<PurchaseResultData> purchasePackage(Package package) async {
+    // Check if mock mode is enabled
+    if (MockConfig.isMockStoreEnabled) {
+      return await _handleMockPurchase(package);
+    }
+
     try {
       AppLogger.info('🛒 Starting purchase for package: ${package.identifier}');
 
@@ -126,8 +132,53 @@ class StoreService {
     }
   }
 
+  /// Handle mock purchase flow
+  Future<PurchaseResultData> _handleMockPurchase(Package package) async {
+    AppLogger.info('🎭 [MOCK] Starting mock purchase: ${package.identifier}');
+
+    // Find corresponding mock package
+    final mockPackage = MockStoreService.mockPackages.firstWhere(
+      (p) => p.identifier == package.identifier,
+      orElse: () => MockPackage(
+        identifier: package.identifier,
+        title: package.storeProduct.title,
+        description: package.storeProduct.description,
+        price: package.storeProduct.price,
+        priceString: package.storeProduct.priceString,
+        gemstones: extractGemstonesFromPackage(package),
+      ),
+    );
+
+    // Simulate the purchase
+    final result = await MockStoreService.simulatePurchase(mockPackage);
+
+    // If successful, add gemstones to user account
+    if (result.isSuccess &&
+        result.gemstonesReceived != null &&
+        result.gemstonesReceived! > 0) {
+      await _userService.addGemstones(result.gemstonesReceived!);
+
+      // Send mock notification
+      await _notificationService.sendPurchaseSuccessNotification(
+        gemstonesReceived: result.gemstonesReceived!,
+        totalGemstones: await _userService.getGemstones(),
+      );
+
+      AppLogger.info(
+        '💎 [MOCK] Added ${result.gemstonesReceived} gemstones to user account',
+      );
+    }
+
+    return result;
+  }
+
   /// Restore previous purchases
   Future<PurchaseResultData> restorePurchases() async {
+    // Check if mock mode is enabled
+    if (MockConfig.isMockStoreEnabled) {
+      return await MockStoreService.simulateRestorePurchases();
+    }
+
     try {
       AppLogger.info('🔄 Restoring purchases...');
 

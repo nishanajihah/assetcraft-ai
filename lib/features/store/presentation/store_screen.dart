@@ -9,6 +9,7 @@ import '../../gemstones/widgets/gemstone_notification_widget.dart';
 import '../../../mock/mock_config.dart';
 import '../../../mock/store/mock_store_service.dart';
 import '../../../core/services/user_service.dart';
+import '../../user_management/user_management.dart';
 
 /// Enhanced Store Screen using the new StoreService
 class StoreScreen extends ConsumerStatefulWidget {
@@ -44,6 +45,18 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 onPressed: _isLoading ? null : _restorePurchases,
                 icon: const Icon(Icons.restore),
                 tooltip: 'Restore Purchases',
+              ),
+              // Settings button
+              IconButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const UserManagementPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings),
+                tooltip: 'Settings & Account',
               ),
             ],
           ),
