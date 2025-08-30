@@ -1,5 +1,5 @@
 name: assetcraft_ai
-description: "AI-powered asset creation tool for developers and designers"
+description: "AI-powered asset creation tool for developer"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -18,34 +18,34 @@ dependencies:
   
   # State Management (Riverpod with code generation)
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.0  # Updated to latest
+  riverpod_annotation: ^2.6.0  
   
   # Navigation
-  go_router: ^14.6.1  # Updated to latest
+  go_router: ^14.6.1  
   
   # Local Database (Isar - Primary storage)
-  isar: ^4.0.0  # Try newer version if available
-  isar_flutter_libs: ^4.0.0  # Try newer version if available
+  isar: ^3.1.0+1  
+  isar_flutter_libs: ^3.1.0+1  
   path_provider: ^2.1.4
   
   # Web Storage
   shared_preferences: ^2.3.3
   
   # Cloud Backend (Supabase - FREE tier, better cost control)
-  supabase_flutter: ^2.8.3  # Updated to latest
+  supabase_flutter: ^2.8.3 
   
   # Network & HTTP
   dio: ^5.7.0
-  http: ^1.2.2  # Updated to latest
+  http: ^1.2.2 
   
   # AI Integration (Gemini)
-  google_generative_ai: ^0.4.6  # Updated to latest
+  google_generative_ai: ^0.4.6 
   
   # RevenueCat (Monetization)
-  purchases_flutter: ^8.0.4  # Updated to latest
+  purchases_flutter: ^8.0.4 
   
   # Push Notifications (OneSignal)
-  onesignal_flutter: ^5.2.6  # Updated to latest
+  onesignal_flutter: ^5.2.6 
   
   # Google Mobile Ads (Rewarded Ads) - Temporarily disabled due to build issues
   # google_mobile_ads: ^5.1.0
@@ -62,10 +62,10 @@ dependencies:
   
   # Utilities
   uuid: ^4.5.1
-  intl: ^0.20.0  # Updated to latest
+  intl: ^0.20.0 
   equatable: ^2.0.5
   permission_handler: ^11.3.1
-  share_plus: ^10.1.2  # Updated to latest
+  share_plus: ^10.1.2 
   url_launcher: ^6.3.1
   flutter_dotenv: ^5.1.0  # For loading .env files
   
@@ -79,10 +79,8 @@ dev_dependencies:
   
   # Code Generation (Riverpod + Isar)
   build_runner: ^2.4.13
-  riverpod_generator: ^2.6.0  # Updated to latest to match riverpod_annotation
-  riverpod_lint: ^2.6.0  # Updated to latest
-  custom_lint: ^0.8.0  # Updated to latest
-  isar_generator: ^4.0.0  # Match Isar version
+  riverpod_generator: ^2.4.0 
+  isar_generator: ^3.1.0+1  # Match Isar version
 
 flutter:
   uses-material-design: true
