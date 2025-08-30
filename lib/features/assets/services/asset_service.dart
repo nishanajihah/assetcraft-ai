@@ -278,6 +278,69 @@ class AssetService {
     }
   }
 
+  /// Get all public assets from Supabase database for the Community Gallery
+  ///
+  /// This method queries the Supabase database for all assets where the `isPublic` column is `true`.
+  /// Returns a List of AssetModel objects that are publicly shared by users.
+  /// Used by the Community Gallery to display public user-generated content.
+  Future<List<AssetModel>> getPublicAssets() async {
+    try {
+      AppLogger.info('🌍 Fetching public assets from Supabase database');
+
+      if (!Environment.hasSupabaseConfig) {
+        AppLogger.warning('⚠️ Supabase not configured, returning empty list');
+        return [];
+      }
+
+      final response = await _supabase
+          .from('assets')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at', ascending: false);
+
+      if (response.isEmpty) {
+        AppLogger.info('📭 No public assets found');
+        return [];
+      }
+
+      final List<AssetModel> publicAssets = (response as List)
+          .map((json) => AssetModel.fromJson(json))
+          .toList();
+
+      AppLogger.info('✅ Fetched ${publicAssets.length} public assets');
+      return publicAssets;
+    } catch (e) {
+      AppLogger.error('❌ Error fetching public assets: $e');
+      throw Exception('Failed to fetch public assets: $e');
+    }
+  }
+
+  /// Toggle the public status of an asset
+  ///
+  /// Updates both local storage and Supabase database to set the asset's public status.
+  /// When an asset is made public, it will appear in the Community Gallery.
+  Future<void> toggleAssetPublicStatus(AssetModel asset) async {
+    try {
+      AppLogger.info(
+        '🔄 Toggling public status for asset: ${asset.supabaseId}',
+      );
+
+      final newPublicStatus = !asset.isPublic;
+      final updatedAsset = asset.copyWith(isPublic: newPublicStatus);
+
+      // Update local storage
+      await _storage.updateAsset(updatedAsset);
+
+      // Update Supabase database
+      await _updateAssetInSupabaseDatabase(updatedAsset);
+
+      AppLogger.info('✅ Asset public status updated to: $newPublicStatus');
+    } catch (e) {
+      AppLogger.error('❌ Error toggling asset public status: $e');
+      rethrow;
+    }
+  }
+
   /// Sync assets from Supabase database to local storage
   Future<void> syncAssetsFromCloud(String userId) async {
     try {

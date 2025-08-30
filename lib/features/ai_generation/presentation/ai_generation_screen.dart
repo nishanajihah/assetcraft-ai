@@ -16,6 +16,7 @@ import '../providers/generation_state_providers.dart';
 import '../../gemstones/gemstone_ui_provider.dart';
 import '../../assets/models/asset_model.dart';
 import '../../assets/providers/asset_providers.dart';
+import '../../user_management/user_management.dart';
 
 /// Generation steps for progressive UI flow
 enum GenerationStep {
@@ -2770,6 +2771,25 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // Settings button
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserManagementPage(),
+                ),
+              );
+            },
+            icon: Icon(
+              Icons.settings,
+              color: AppColors.textSecondary,
+              size: 24,
+            ),
+            tooltip: 'Settings & Account',
           ),
         ],
       ),

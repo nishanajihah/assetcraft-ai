@@ -5,8 +5,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../features/assets/models/asset_model.dart';
 import '../../../features/assets/providers/asset_providers.dart';
+import '../../../features/gallery/presentation/gallery_screen.dart';
 import '../../../shared/widgets/neu_container.dart';
 import '../../../mock/widgets/mock_indicator.dart';
+import '../../user_management/user_management.dart';
 
 /// Asset Library Screen - Browse and manage generated assets
 class AssetLibraryScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class AssetLibraryScreen extends ConsumerStatefulWidget {
 
 class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
   String? _userId;
+  bool _showCommunityGallery = false;
 
   @override
   void initState() {
@@ -275,39 +278,22 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // If showing community gallery, render the GalleryScreen
+    if (_showCommunityGallery) {
+      return Column(
+        children: [
+          // Custom App Bar with toggle
+          _buildToggleAppBar(),
+          // Gallery Screen content
+          const Expanded(child: GalleryScreen()),
+        ],
+      );
+    }
+
     return Column(
       children: [
-        // Custom App Bar
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Asset Library',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const MockStatusChip(),
-              IconButton(
-                onPressed: () {
-                  // TODO: Implement search
-                },
-                icon: const Icon(Icons.search),
-              ),
-              IconButton(
-                onPressed: () {
-                  // TODO: Implement filter
-                },
-                icon: const Icon(Icons.filter_list),
-              ),
-            ],
-          ),
-        ),
+        // Custom App Bar with toggle
+        _buildToggleAppBar(),
         // Body content
         Expanded(
           child: Padding(
@@ -495,6 +481,152 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Build the toggle app bar with switch between personal library and community gallery
+  Widget _buildToggleAppBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _showCommunityGallery ? 'Community Gallery' : 'Asset Library',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const MockStatusChip(),
+              if (!_showCommunityGallery) ...[
+                IconButton(
+                  onPressed: () {
+                    // TODO: Implement search
+                  },
+                  icon: const Icon(Icons.search),
+                ),
+                IconButton(
+                  onPressed: () {
+                    // TODO: Implement filter
+                  },
+                  icon: const Icon(Icons.filter_list),
+                ),
+              ],
+              // Settings button (always visible)
+              IconButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const UserManagementPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings),
+                tooltip: 'Settings & Account',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Toggle switches
+          NeuContainer(
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showCommunityGallery = false;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: !_showCommunityGallery
+                            ? AppColors.primaryGold
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.folder_outlined,
+                            size: 18,
+                            color: !_showCommunityGallery
+                                ? Colors.white
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'My Library',
+                            style: TextStyle(
+                              color: !_showCommunityGallery
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              fontWeight: !_showCommunityGallery
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showCommunityGallery = true;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _showCommunityGallery
+                            ? AppColors.primaryGold
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.public,
+                            size: 18,
+                            color: _showCommunityGallery
+                                ? Colors.white
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Community',
+                            style: TextStyle(
+                              color: _showCommunityGallery
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              fontWeight: _showCommunityGallery
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
