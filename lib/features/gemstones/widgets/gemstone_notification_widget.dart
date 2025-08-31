@@ -536,6 +536,23 @@ class GemstoneNotificationOverlay {
     );
   }
 
+  /// Show an ad reward notification
+  static void showAdReward(
+    BuildContext context, {
+    required int gemstonesReceived,
+    required int totalGemstones,
+  }) {
+    _showNotification(
+      context,
+      title: '🎉 Ad Reward Earned!',
+      message:
+          'Thanks for watching! You earned $gemstonesReceived Gemstones! Total: $totalGemstones',
+      gemstonesReceived: gemstonesReceived,
+      icon: Icons.play_circle_filled,
+      backgroundColor: Colors.green,
+    );
+  }
+
   /// Show a low gemstones warning
   static void showLowGemstones(
     BuildContext context, {

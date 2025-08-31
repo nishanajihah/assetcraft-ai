@@ -14,6 +14,7 @@ import '../../../core/utils/app_logger.dart';
 import '../../../shared/widgets/enhanced_containers.dart';
 import '../providers/generation_state_providers.dart';
 import '../../gemstones/gemstone_ui_provider.dart';
+import '../../gemstones/presentation/gemstone_screen.dart';
 import '../../assets/models/asset_model.dart';
 import '../../assets/providers/asset_providers.dart';
 import '../../user_management/user_management.dart';
@@ -100,7 +101,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       // Check if user has enough gemstones
       final currentGemstones = await userService.getGemstones();
       if (currentGemstones <= 0) {
-        _showError("You're out of Gemstones!");
+        _showOutOfGemstonesDialog();
         return;
       }
 
@@ -117,7 +118,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
       // Check if user has enough gemstones
       if (!gemstonesNotifier.deductGemstones(1)) {
-        _showError("You're out of Gemstones!");
+        _showOutOfGemstonesDialog();
         return;
       }
 
@@ -433,6 +434,116 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
       ),
+    );
+  }
+
+  void _showOutOfGemstonesDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.backgroundSecondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.diamond, color: AppColors.primaryGold, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Out of Gemstones!',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You need gemstones to generate assets with AI.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Get more gemstones by:',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.play_circle, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Watching ads (3 gemstones)',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.shopping_bag,
+                    color: AppColors.primaryGold,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Purchasing gemstone packages',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    color: Colors.blue,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Daily login bonus (5 gemstones)',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const GemstoneScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGold,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Get Gemstones'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1284,20 +1395,20 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           _buildCondensedAssetTypeDisplay(),
           const SizedBox(height: 24),
 
-          // Prompt Input
-          Expanded(
+          // Prompt Input - Use Flexible to allow shrinking
+          Flexible(
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: isLargeScreen ? 600 : double.infinity,
               ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: _buildPromptInput(isAiAvailable, totalCredits),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildGenerationControls(isAiAvailable, totalCredits),
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildPromptInput(isAiAvailable, totalCredits),
+                    const SizedBox(height: 20),
+                    _buildGenerationControls(isAiAvailable, totalCredits),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1308,9 +1419,10 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
 
   // Step 3: Generating (Loading with condensed UI and preview area)
   Widget _buildGeneratingStep(bool isLargeScreen) {
-    return Container(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Condensed prompt display (shrunk)
           AnimatedContainer(
@@ -1365,7 +1477,10 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           const SizedBox(height: 24),
 
           // Preview area that appears during generation
-          Expanded(
+          Container(
+            height:
+                MediaQuery.of(context).size.height *
+                0.4, // Fixed height based on screen
             child: EnhancedNeuContainer(
               padding: const EdgeInsets.all(24),
               hasGoldAccent: true,
@@ -2826,7 +2941,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
       hasGoldAccent: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Header with title and suggest button
           Row(
@@ -2892,23 +3007,22 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 12), // Reduced spacing
           // Enhanced Text Input with Strong Glassmorphism
           EnhancedInputContainer(
             hasFocus: _promptFocusNode.hasFocus,
-            minHeight: 120,
+            minHeight: 80, // Reduced height for better fit
             child: TextField(
               controller: _promptController,
               focusNode: _promptFocusNode,
-              maxLines: 5, // Reduced for better fit
-              minLines: 3, // Reduced minimum lines
+              maxLines: 3, // Reduced for better fit
+              minLines: 2, // Reduced minimum lines
               maxLength: AppConstants.maxPromptLength,
               enabled: !_isGenerating && isAiAvailable,
               style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 16, // Good size for readability
-                height: 1.5, // Better line spacing
+                fontSize: 14, // Slightly smaller font
+                height: 1.3, // Tighter line spacing
                 fontWeight: FontWeight.w400,
               ),
               decoration: InputDecoration(
@@ -2930,7 +3044,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // Reduced spacing
           // Enhanced Character Counter and Status
           Row(
             children: [
