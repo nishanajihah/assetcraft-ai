@@ -127,9 +127,9 @@ class _FrameRateIndicatorState extends State<FrameRateIndicator>
     if (!kDebugMode) return const SizedBox.shrink();
 
     Color fpsColor = Colors.green;
-    if (_fps < 30)
+    if (_fps < 30) {
       fpsColor = Colors.red;
-    else if (_fps < 50)
+    } else if (_fps < 50)
       fpsColor = Colors.orange;
 
     return Container(

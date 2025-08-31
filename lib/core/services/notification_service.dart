@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
@@ -15,12 +16,12 @@ part 'notification_service.g.dart';
 /// It integrates with Supabase for user data and UserService for business logic.
 class NotificationService {
   final SupabaseClient _supabase;
-  final UserService _userService;
+  final UserService? _userService;
   bool _isInitialized = false;
 
   NotificationService({
     required SupabaseClient supabase,
-    required UserService userService,
+    UserService? userService,
   }) : _supabase = supabase,
        _userService = userService;
 
@@ -354,9 +355,8 @@ class NotificationService {
 @riverpod
 NotificationService notificationService(NotificationServiceRef ref) {
   final supabase = Supabase.instance.client;
-  final userService = ref.watch(userServiceProvider);
-
-  return NotificationService(supabase: supabase, userService: userService);
+  // Remove circular dependency for now - we'll handle this later
+  return NotificationService(supabase: supabase);
 }
 
 /// Provider to check if notifications are available and enabled

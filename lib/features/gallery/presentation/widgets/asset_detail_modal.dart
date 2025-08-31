@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../features/assets/models/asset_model.dart';
 import '../../../../shared/widgets/neu_container.dart';
-import '../../../../mock/widgets/mock_indicator.dart';
 
 /// Modal for displaying detailed view of an asset from the gallery
 class AssetDetailModal extends ConsumerWidget {

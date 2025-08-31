@@ -1,6 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/environment.dart';
+import '../../../mock/auth/mock_auth_service.dart';
 
 part 'auth_repository.g.dart';
 
@@ -16,6 +18,14 @@ class AuthRepository {
     required String password,
   }) async {
     try {
+      // Use mock auth if enabled
+      if (Environment.enableMockAuth) {
+        return await MockAuthService.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      }
+
       final response = await _supabaseClient.auth.signInWithPassword(
         email: email,
         password: password,
@@ -32,6 +42,14 @@ class AuthRepository {
     required String password,
   }) async {
     try {
+      // Use mock auth if enabled
+      if (Environment.enableMockAuth) {
+        return await MockAuthService.signUpWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      }
+
       final response = await _supabaseClient.auth.signUp(
         email: email,
         password: password,
@@ -45,6 +63,12 @@ class AuthRepository {
   /// Sign out current user
   Future<void> signOut() async {
     try {
+      // Use mock auth if enabled
+      if (Environment.enableMockAuth) {
+        await MockAuthService.signOut();
+        return;
+      }
+
       await _supabaseClient.auth.signOut();
     } catch (e) {
       rethrow;
@@ -52,17 +76,30 @@ class AuthRepository {
   }
 
   /// Get current user
-  User? get currentUser => _supabaseClient.auth.currentUser;
+  User? get currentUser {
+    // Use mock auth if enabled
+    if (Environment.enableMockAuth) {
+      return MockAuthService.currentUser;
+    }
+
+    return _supabaseClient.auth.currentUser;
+  }
 
   /// Auth state stream
-  Stream<AuthState> get authStateChanges =>
-      _supabaseClient.auth.onAuthStateChange;
+  Stream<AuthState> get authStateChanges {
+    // Use mock auth if enabled
+    if (Environment.enableMockAuth) {
+      return MockAuthService.authStateChanges;
+    }
+
+    return _supabaseClient.auth.onAuthStateChange;
+  }
 
   /// Check if user is authenticated
   bool get isAuthenticated => currentUser != null;
 }
 
-/// Provider for AuthRepository using riverpod_annotation
+/// Provider for AuthRepository using riverpod annotation
 @riverpod
 AuthRepository authRepository(AuthRepositoryRef ref) {
   try {
@@ -81,7 +118,7 @@ AuthRepository authRepository(AuthRepositoryRef ref) {
   return AuthRepository(Supabase.instance.client);
 }
 
-/// Current user provider using riverpod_annotation
+/// Current user provider using riverpod annotation
 @riverpod
 Stream<User?> currentUser(CurrentUserRef ref) {
   final authRepository = ref.watch(authRepositoryProvider);
@@ -90,7 +127,7 @@ Stream<User?> currentUser(CurrentUserRef ref) {
   );
 }
 
-/// Authentication state provider using riverpod_annotation
+/// Authentication state provider using riverpod annotation
 @riverpod
 bool isAuthenticated(IsAuthenticatedRef ref) {
   final user = ref.watch(currentUserProvider);
