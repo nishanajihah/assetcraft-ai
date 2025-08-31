@@ -1,7 +1,7 @@
 targets:
   $default:
     builders:
-      # Isar generator for database models
-      isar_generator|isar_generator:
-        options:
-          web_safe_integers: true
+      riverpod_generator:riverpod_generator:
+        enabled: true
+      isar_generator:isar_generator:
+        enabled: true

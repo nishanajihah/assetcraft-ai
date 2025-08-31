@@ -47,8 +47,8 @@ dependencies:
   # Push Notifications (OneSignal)
   onesignal_flutter: ^5.2.6 
   
-  # Google Mobile Ads (Rewarded Ads) - Temporarily disabled due to build issues
-  # google_mobile_ads: ^5.1.0
+  # Google Mobile Ads (Rewarded Ads)
+  google_mobile_ads: ^5.1.0
   
   # Image & Media Handling
   image: ^4.2.0
