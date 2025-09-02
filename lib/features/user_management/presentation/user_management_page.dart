@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../shared/widgets/enhanced_containers.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../../../features/auth/screens/login_screen.dart';
 
 /// User Management Page

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/enhanced_containers.dart';
+import '../app_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 
 /// Example page showing how to use Enhanced Containers in other screens

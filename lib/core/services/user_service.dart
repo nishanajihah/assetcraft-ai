@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
@@ -208,7 +207,7 @@ class UserService {
     _lastDailyGemstonesTotal = mockCurrentGemstones + dailyGemstones;
 
     AppLogger.info(
-      '🧪 Mock daily gemstones awarded: +$dailyGemstones (Total: ${_lastDailyGemstonesTotal})',
+      '🧪 Mock daily gemstones awarded: +$dailyGemstones (Total: $_lastDailyGemstonesTotal)',
     );
 
     // Notify listeners

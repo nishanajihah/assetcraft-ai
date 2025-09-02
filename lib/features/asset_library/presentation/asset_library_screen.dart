@@ -6,7 +6,7 @@ import '../../../core/utils/app_logger.dart';
 import '../../../features/assets/models/asset_model.dart';
 import '../../../features/assets/providers/asset_providers.dart';
 import '../../../features/gallery/presentation/gallery_screen.dart';
-import '../../../shared/widgets/neu_container.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../../../mock/widgets/mock_indicator.dart';
 import '../../user_management/user_management.dart';
 
@@ -31,7 +31,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
   /// Build the empty state widget when no assets are available
   Widget _buildEmptyState() {
     return Center(
-      child: NeuContainer(
+      child: AppCardContainer(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -108,7 +108,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
 
   /// Build a card for a single asset
   Widget _buildAssetCard(AssetModel asset) {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +301,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
             child: Column(
               children: [
                 // Stats Card
-                NeuContainer(
+                AppCardContainer(
                   padding: const EdgeInsets.all(20),
                   child: Row(
                     children: [
@@ -533,7 +533,7 @@ class _AssetLibraryScreenState extends ConsumerState<AssetLibraryScreen> {
           ),
           const SizedBox(height: 12),
           // Toggle switches
-          NeuContainer(
+          AppCardContainer(
             padding: const EdgeInsets.all(4),
             child: Row(
               children: [

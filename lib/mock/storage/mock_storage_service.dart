@@ -5,7 +5,7 @@ import '../../features/assets/models/asset_model.dart';
 /// Mock storage service for development and testing
 ///
 /// This service provides in-memory storage without persistence.
-/// Used when Isar is not available or for testing purposes.
+/// Used when Hive is not available or for testing purposes.
 /// All data is lost when the app restarts.
 class MockStorageService extends StorageService {
   final List<AssetModel> _assets = [];
@@ -18,45 +18,48 @@ class MockStorageService extends StorageService {
 
   void _initializeSampleData() {
     final sampleAssets = [
-      AssetModel()
-        ..supabaseId = 'sample_1'
-        ..userId = 'user_123'
-        ..prompt = 'A beautiful sunset over mountains'
-        ..imagePath = 'https://picsum.photos/512/512?random=1'
-        ..createdAt = DateTime.now().subtract(const Duration(hours: 2))
-        ..isFavorite = false
-        ..tags = ['sunset', 'mountains', 'nature']
-        ..imageWidth = 512
-        ..imageHeight = 512
-        ..fileSizeBytes = 1024000
-        ..mimeType = 'image/jpeg'
-        ..status = AssetStatus.completed,
-      AssetModel()
-        ..supabaseId = 'sample_2'
-        ..userId = 'user_123'
-        ..prompt = 'Cyberpunk city at night with neon lights'
-        ..imagePath = 'https://picsum.photos/512/512?random=2'
-        ..createdAt = DateTime.now().subtract(const Duration(hours: 4))
-        ..isFavorite = true
-        ..tags = ['cyberpunk', 'city', 'neon', 'night']
-        ..imageWidth = 512
-        ..imageHeight = 512
-        ..fileSizeBytes = 980000
-        ..mimeType = 'image/png'
-        ..status = AssetStatus.completed,
-      AssetModel()
-        ..supabaseId = 'sample_3'
-        ..userId = 'user_123'
-        ..prompt = 'Cute cartoon cat wearing a wizard hat'
-        ..imagePath = 'https://picsum.photos/512/512?random=3'
-        ..createdAt = DateTime.now().subtract(const Duration(minutes: 30))
-        ..isFavorite = false
-        ..tags = ['cat', 'wizard', 'cute', 'cartoon']
-        ..imageWidth = 512
-        ..imageHeight = 512
-        ..fileSizeBytes = 750000
-        ..mimeType = 'image/jpeg'
-        ..status = AssetStatus.completed,
+      AssetModel(
+        supabaseId: 'sample_1',
+        userId: 'user_123',
+        prompt: 'A beautiful sunset over mountains',
+        imagePath: 'https://picsum.photos/512/512?random=1',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        isFavorite: false,
+        tags: ['sunset', 'mountains', 'nature'],
+        imageWidth: 512,
+        imageHeight: 512,
+        fileSizeBytes: 1000000,
+        mimeType: 'image/jpeg',
+        status: AssetStatus.completed,
+      ),
+      AssetModel(
+        supabaseId: 'sample_2',
+        userId: 'user_123',
+        prompt: 'Cyberpunk city at night with neon lights',
+        imagePath: 'https://picsum.photos/512/512?random=2',
+        createdAt: DateTime.now().subtract(const Duration(hours: 4)),
+        isFavorite: true,
+        tags: ['cyberpunk', 'city', 'neon', 'night'],
+        imageWidth: 512,
+        imageHeight: 512,
+        fileSizeBytes: 980000,
+        mimeType: 'image/png',
+        status: AssetStatus.completed,
+      ),
+      AssetModel(
+        supabaseId: 'sample_3',
+        userId: 'user_123',
+        prompt: 'Cute cartoon cat wearing a wizard hat',
+        imagePath: 'https://picsum.photos/512/512?random=3',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+        isFavorite: false,
+        tags: ['cat', 'wizard', 'cute', 'cartoon'],
+        imageWidth: 512,
+        imageHeight: 512,
+        fileSizeBytes: 750000,
+        mimeType: 'image/jpeg',
+        status: AssetStatus.completed,
+      ),
     ];
 
     _assets.addAll(sampleAssets);
@@ -74,11 +77,6 @@ class MockStorageService extends StorageService {
 
     // Remove existing asset with same supabaseId if it exists
     _assets.removeWhere((a) => a.supabaseId == asset.supabaseId);
-
-    // Assign a local ID if not set
-    if (asset.id == 0) {
-      asset.id = _idCounter++;
-    }
 
     // Add the new asset
     _assets.add(asset);
@@ -186,19 +184,20 @@ class MockStorageService extends StorageService {
 
   /// Mock-specific method to add more sample data
   void addSampleAsset(String prompt, List<String> tags) {
-    final asset = AssetModel()
-      ..supabaseId = 'mock_${DateTime.now().millisecondsSinceEpoch}'
-      ..userId = 'user_123'
-      ..prompt = prompt
-      ..imagePath = 'https://picsum.photos/512/512?random=$_idCounter'
-      ..createdAt = DateTime.now()
-      ..isFavorite = false
-      ..tags = tags
-      ..imageWidth = 512
-      ..imageHeight = 512
-      ..fileSizeBytes = 1000000
-      ..mimeType = 'image/jpeg'
-      ..status = AssetStatus.completed;
+    final asset = AssetModel(
+      supabaseId: 'mock_${DateTime.now().millisecondsSinceEpoch}',
+      userId: 'user_123',
+      prompt: prompt,
+      imagePath: 'https://picsum.photos/512/512?random=$_idCounter',
+      createdAt: DateTime.now(),
+      isFavorite: false,
+      tags: tags,
+      imageWidth: 512,
+      imageHeight: 512,
+      fileSizeBytes: 1000000,
+      mimeType: 'image/jpeg',
+      status: AssetStatus.completed,
+    );
 
     _assets.add(asset);
     AppLogger.info('🎭 [MOCK] Added sample asset: $prompt');

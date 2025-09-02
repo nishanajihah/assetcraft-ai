@@ -11,7 +11,7 @@ import '../../../core/services/ai_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/providers/gemstones_provider.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../shared/widgets/enhanced_containers.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../providers/generation_state_providers.dart';
 import '../../gemstones/gemstone_ui_provider.dart';
 import '../../gemstones/presentation/gemstone_screen.dart';
@@ -1477,7 +1477,7 @@ class _AIGenerationScreenState extends ConsumerState<AIGenerationScreen>
           const SizedBox(height: 24),
 
           // Preview area that appears during generation
-          Container(
+          SizedBox(
             height:
                 MediaQuery.of(context).size.height *
                 0.4, // Fixed height based on screen

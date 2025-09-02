@@ -5,7 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../features/assets/models/asset_model.dart';
 import '../providers/gallery_providers.dart';
-import '../../../shared/widgets/neu_container.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import 'widgets/asset_detail_modal.dart';
 
 /// Community Gallery Screen - Display public user-generated images
@@ -93,7 +93,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
       tag: 'gallery-asset-${asset.supabaseId}',
       child: GestureDetector(
         onTap: () => _showAssetDetail(asset, index),
-        child: NeuContainer(
+        child: AppCardContainer(
           padding: EdgeInsets.zero,
           borderRadius: 16,
           child: ClipRRect(
@@ -240,7 +240,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
-        child: NeuContainer(
+        child: AppCardContainer(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -299,7 +299,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
-        child: NeuContainer(
+        child: AppCardContainer(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,

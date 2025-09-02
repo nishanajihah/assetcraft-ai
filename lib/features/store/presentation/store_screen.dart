@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/neu_container.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../../gemstones/gemstone_ui_provider.dart';
 import '../../gemstones/presentation/gemstone_screen.dart';
 import '../services/store_service.dart';
@@ -98,8 +98,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   Widget _buildCurrentGemstonesCard() {
     final gemstonesAsync = ref.watch(currentUserGemstonesProvider);
 
-    return NeuContainer(
+    return AppContainer(
       padding: const EdgeInsets.all(24),
+      hasGoldAccent: true,
       child: Column(
         children: [
           Icon(Icons.diamond, color: AppColors.primaryGold, size: 48),
@@ -136,7 +137,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildEarnFreeGemstonesSection() {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +357,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      child: NeuContainer(
+      child: AppContainer(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -450,7 +451,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildActiveSubscriptionCard() {
-    return NeuContainer(
+    return AppContainer(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -476,7 +477,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildSubscriptionOfferCard() {
-    return NeuContainer(
+    return AppContainer(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -521,7 +522,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildNoPackagesAvailable() {
-    return NeuContainer(
+    return AppContainer(
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
@@ -551,7 +552,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildPackagesError(Object error) {
-    return NeuContainer(
+    return AppContainer(
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
@@ -755,7 +756,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   /// Build a mock package card
   Widget _buildMockPackageCard(MockPackage mockPackage) {
-    return NeuContainer(
+    return AppContainer(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [

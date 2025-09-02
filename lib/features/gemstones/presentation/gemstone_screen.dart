@@ -4,7 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/services/ad_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../shared/widgets/neu_container.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../../store/presentation/store_screen.dart';
 import '../widgets/gemstone_notification_widget.dart';
 import '../gemstone_ui_provider.dart';
@@ -122,7 +122,7 @@ class _GemstoneScreenState extends ConsumerState<GemstoneScreen>
   }
 
   Widget _buildCurrentGemstonesCard(AsyncValue<int> currentGemstones) {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
@@ -195,7 +195,7 @@ class _GemstoneScreenState extends ConsumerState<GemstoneScreen>
   }
 
   Widget _buildWatchAdSection(bool isAdReady, bool isAdLoading) {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +303,7 @@ class _GemstoneScreenState extends ConsumerState<GemstoneScreen>
   }
 
   Widget _buildPurchaseSection() {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,7 +377,7 @@ class _GemstoneScreenState extends ConsumerState<GemstoneScreen>
   }
 
   Widget _buildDailyGemstonesInfo() {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,7 +433,7 @@ class _GemstoneScreenState extends ConsumerState<GemstoneScreen>
   }
 
   Widget _buildTipsSection() {
-    return NeuContainer(
+    return AppCardContainer(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

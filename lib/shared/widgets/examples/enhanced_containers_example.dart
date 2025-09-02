@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../enhanced_containers.dart';
+import '../app_widgets.dart';
 
 /// Example usage file for Enhanced Glassmorphism and Neumorphism Containers
 ///
@@ -213,7 +213,7 @@ class QuickExamples {
     return EnhancedNeuContainer(
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.all(8),
-      isPressed: isPressed,
+      pressed: isPressed,
       hasGoldAccent: true,
       onTap: onTap,
       child: child,

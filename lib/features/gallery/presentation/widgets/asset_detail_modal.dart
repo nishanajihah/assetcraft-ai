@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../features/assets/models/asset_model.dart';
-import '../../../../shared/widgets/neu_container.dart';
+import '../../../../shared/widgets/app_widgets.dart';
 
 /// Modal for displaying detailed view of an asset from the gallery
 class AssetDetailModal extends ConsumerWidget {
@@ -71,7 +71,7 @@ class AssetDetailModal extends ConsumerWidget {
                   // Hero image
                   Hero(
                     tag: heroTag,
-                    child: NeuContainer(
+                    child: AppContainer(
                       padding: EdgeInsets.zero,
                       borderRadius: 16,
                       child: ClipRRect(
@@ -118,7 +118,7 @@ class AssetDetailModal extends ConsumerWidget {
                   const SizedBox(height: 24),
 
                   // Asset information
-                  NeuContainer(
+                  AppContainer(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
