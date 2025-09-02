@@ -66,8 +66,7 @@ temp_assets/
 *.db
 *.sqlite
 *.sqlite3
-*.isar
-*.isar.lock
+
 
 # RevenueCat configuration
 ios/Runner/RevenueCat-Info.plist
@@ -159,9 +158,9 @@ tmp/
 *.jks
 upload-keystore.jks
 
-# Local database (Isar)
-*.isar
-*.isar.lock
+# Local database (Hive)
+*.hive
+*.lock
 
 # Asset cache
 /assets/cache/
