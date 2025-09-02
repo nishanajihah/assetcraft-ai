@@ -110,7 +110,16 @@ class WebStorageService extends StorageService {
   @override
   Stream<List<AssetModel>> watchAssets() {
     // Emit current assets immediately
-    getAllAssets().then((assets) => _assetsController.add(assets));
+    getAllAssets()
+        .then((assets) {
+          if (assets.isNotEmpty || _assetsController.hasListener) {
+            _assetsController.add(assets);
+          }
+        })
+        .catchError((error) {
+          AppLogger.error('❌ Error in watchAssets: $error');
+          _assetsController.add([]); // Add empty list instead of null
+        });
 
     return _assetsController.stream;
   }
