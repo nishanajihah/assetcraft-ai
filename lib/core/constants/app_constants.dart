@@ -1,65 +1,73 @@
-/// App-wide constants for AssetCraft AI
+/// Application constants for AssetCraft AI
 class AppConstants {
-  // App Info
   static const String appName = 'AssetCraft AI';
-  static const String appTagline = 'Create. Design. Build.';
   static const String appVersion = '1.0.0';
+  static const String appDescription =
+      'AI-powered asset creation tool for developers';
 
-  // Credit System
-  static const int freeDailyCredits = 5;
-  static const int starterPackCredits = 25;
-  static const int creatorPackCredits = 75;
-  static const int proPackCredits = 200;
+  // Database
+  static const String hiveBoxName = 'assetcraft_ai_box';
+  static const String userBoxName = 'user_box';
+  static const String assetsBoxName = 'assets_box';
+  static const String gemstonesBoxName = 'gemstones_box';
 
-  // Pricing (in USD cents)
-  static const int starterPackPrice = 299; // $2.99
-  static const int creatorPackPrice = 799; // $7.99
-  static const int proPackPrice = 1999; // $19.99
-  static const int premiumMonthlyPrice = 999; // $9.99
+  // API
+  static const Duration apiTimeout = Duration(seconds: 30);
+  static const int maxRetries = 3;
 
-  // Product IDs for RevenueCat
-  static const String starterPackId = 'starter_pack_25';
-  static const String creatorPackId = 'creator_pack_75';
-  static const String proPackId = 'pro_pack_200';
-  static const String premiumMonthlyId = 'premium_monthly';
-
-  // Asset Generation
-  static const int maxPromptLength = 500;
-  static const List<String> supportedFormats = ['PNG', 'JPG', 'SVG'];
-  static const List<String> assetTypes = [
-    'Character',
-    'Environment',
-    'UI Element',
-    'Icon',
-    'Texture',
-    'Logo',
-    'Background',
-    'Object',
-  ];
-
-  // File Storage
-  static const int maxFileSizeMB = 10;
-  static const int maxAssetsPerUser = 1000;
-
-  // UI Constants
+  // UI
+  static const Duration animationDuration = Duration(milliseconds: 300);
   static const double defaultPadding = 16.0;
-  static const double defaultBorderRadius = 12.0;
-  static const double cardBorderRadius = 16.0;
-  static const double buttonBorderRadius = 12.0;
+  static const double defaultRadius = 12.0;
 
-  // Animation Durations
-  static const Duration fastAnimation = Duration(milliseconds: 200);
-  static const Duration normalAnimation = Duration(milliseconds: 300);
-  static const Duration slowAnimation = Duration(milliseconds: 500);
+  // Asset generation
+  static const int maxGenerationAttempts = 3;
+  static const int maxAssetsPerGeneration = 10;
 
-  // Error Messages
-  static const String noInternetError = 'No internet connection';
-  static const String insufficientCreditsError = 'Insufficient credits';
-  static const String generationFailedError = 'Asset generation failed';
-  static const String loginRequiredError = 'Please log in to continue';
+  // File paths
+  static const String assetsPath = 'assets';
+  static const String imagesPath = 'assets/images';
+  static const String iconsPath = 'assets/icons';
+  static const String animationsPath = 'assets/animations';
+}
 
-  // Success Messages
-  static const String assetGeneratedSuccess = 'Asset generated successfully!';
-  static const String assetSavedSuccess = 'Asset saved to library';
-  static const String creditsAddedSuccess = 'Credits added to account';
+/// API endpoint constants
+class ApiConstants {
+  static const String geminiApiVersion = 'v1';
+  static const String supabaseApiVersion = 'v1';
+
+  // Gemini endpoints
+  static const String generateContent = '/generateContent';
+  static const String generateImage = '/generateImage';
+
+  // Supabase endpoints
+  static const String users = '/users';
+  static const String assets = '/assets';
+  static const String generations = '/generations';
+}
+
+/// Error message constants
+class ErrorConstants {
+  static const String networkError =
+      'Network connection failed. Please check your internet connection.';
+  static const String serverError =
+      'Server error occurred. Please try again later.';
+  static const String unknownError =
+      'An unknown error occurred. Please try again.';
+  static const String authError = 'Authentication failed. Please log in again.';
+  static const String validationError =
+      'Please check your input and try again.';
+  static const String storageError =
+      'Storage operation failed. Please try again.';
+  static const String permissionError =
+      'Permission denied. Please grant necessary permissions.';
+}
+
+/// Success message constants
+class SuccessConstants {
+  static const String assetGenerated = 'Asset generated successfully!';
+  static const String assetSaved = 'Asset saved to gallery!';
+  static const String profileUpdated = 'Profile updated successfully!';
+  static const String settingsSaved = 'Settings saved successfully!';
+  static const String authSuccess = 'Authentication successful!';
 }

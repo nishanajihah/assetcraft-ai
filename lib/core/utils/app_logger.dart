@@ -1,62 +1,84 @@
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
-/// Centralized logger for AssetCraft AI
-/// Provides different log levels based on environment
+/// Centralized logging utility for AssetCraft AI
 class AppLogger {
-  static Logger? _logger;
+  static late Logger _logger;
+  static bool _isInitialized = false;
 
-  /// Initialize logger (call this after environment is set up)
-  static void initialize({bool isDevelopment = false, bool isStaging = false}) {
+  /// Initialize the logger
+  static void initialize() {
+    if (_isInitialized) return;
+
     _logger = Logger(
+      filter: ProductionFilter(),
       printer: PrettyPrinter(
-        methodCount: 0,
-        errorMethodCount: 5,
-        lineLength: 50,
+        methodCount: 2,
+        errorMethodCount: 8,
+        lineLength: 120,
         colors: true,
         printEmojis: true,
-        dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
-      level: _getLogLevel(isDevelopment, isStaging),
+      output: ConsoleOutput(),
     );
+
+    _isInitialized = true;
+    info('🚀 AppLogger initialized');
   }
 
-  static Level _getLogLevel(bool isDevelopment, bool isStaging) {
-    if (isDevelopment) {
-      return Level.debug; // Log everything in development
-    } else if (isStaging) {
-      return Level.warning; // Log warnings and errors in staging
-    } else {
-      return Level.error; // Only log errors in production
+  /// Log debug messages (only in debug mode)
+  static void debug(dynamic message, [dynamic error, StackTrace? stackTrace]) {
+    if (!_isInitialized) initialize();
+    if (kDebugMode) {
+      _logger.d(message, error: error, stackTrace: stackTrace);
     }
   }
 
-  static void debug(String message, [Object? error, StackTrace? stackTrace]) {
-    _logger?.d(message, error: error, stackTrace: stackTrace);
+  /// Log info messages
+  static void info(dynamic message, [dynamic error, StackTrace? stackTrace]) {
+    if (!_isInitialized) initialize();
+    _logger.i(message, error: error, stackTrace: stackTrace);
   }
 
-  static void info(String message, [Object? error, StackTrace? stackTrace]) {
-    _logger?.i(message, error: error, stackTrace: stackTrace);
+  /// Log warning messages
+  static void warning(
+    dynamic message, [
+    dynamic error,
+    StackTrace? stackTrace,
+  ]) {
+    if (!_isInitialized) initialize();
+    _logger.w(message, error: error, stackTrace: stackTrace);
   }
 
-  static void warning(String message, [Object? error, StackTrace? stackTrace]) {
-    _logger?.w(message, error: error, stackTrace: stackTrace);
+  /// Log error messages
+  static void error(dynamic message, [dynamic error, StackTrace? stackTrace]) {
+    if (!_isInitialized) initialize();
+    _logger.e(message, error: error, stackTrace: stackTrace);
   }
 
-  static void error(String message, [Object? error, StackTrace? stackTrace]) {
-    _logger?.e(message, error: error, stackTrace: stackTrace);
+  /// Log fatal messages
+  static void fatal(dynamic message, [dynamic error, StackTrace? stackTrace]) {
+    if (!_isInitialized) initialize();
+    _logger.f(message, error: error, stackTrace: stackTrace);
   }
 
-  static void wtf(String message, [Object? error, StackTrace? stackTrace]) {
-    _logger?.f(message, error: error, stackTrace: stackTrace);
-  }
-
-  /// Fallback to print if logger is not initialized
+  /// Safe print that works even if logger is not initialized
   static void safePrint(String message) {
-    if (_logger != null) {
-      info(message);
-    } else {
+    if (kDebugMode) {
       debugPrint(message);
     }
+  }
+}
+
+/// Production filter to control log levels in release mode
+class ProductionFilter extends LogFilter {
+  @override
+  bool shouldLog(LogEvent event) {
+    if (kReleaseMode) {
+      // In release mode, only log warnings and errors
+      return event.level.index >= Level.warning.index;
+    }
+    // In debug/profile mode, log everything
+    return true;
   }
 }

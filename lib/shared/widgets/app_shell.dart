@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/ai_generation/presentation/ai_generation_screen.dart';
 import '../../features/asset_library/presentation/asset_library_screen.dart';
 import '../../features/store/presentation/store_screen.dart';
-import '../../features/gemstones/gemstone_ui_provider.dart';
 
 /// Main app shell with bottom navigation
-class AppShell extends ConsumerStatefulWidget {
+class AppShell extends StatefulWidget {
   final int initialIndex;
 
   const AppShell({super.key, this.initialIndex = 0});
 
   @override
-  ConsumerState<AppShell> createState() => _AppShellState();
+  State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends State<AppShell> {
   late int _currentIndex;
 
   @override
@@ -33,8 +31,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for daily gemstone notifications
-    checkAndShowDailyGemstoneNotification(context, ref);
+    // TODO: Implement daily gemstone notifications when gemstone providers are converted
 
     return Scaffold(
       body: Container(
