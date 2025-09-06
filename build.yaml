@@ -1,7 +1,0 @@
-targets:
-  $default:
-    builders:
-      riverpod_generator:riverpod_generator:
-        enabled: true
-      isar_generator:isar_generator:
-        enabled: true

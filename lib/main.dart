@@ -1,189 +1,122 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-// Core imports
-import 'core/config/environment.dart';
-import 'core/services/app_services.dart';
-import 'core/database/database_service.dart';
-import 'core/providers/user_provider.dart';
-import 'core/providers/assets_provider.dart';
-import 'core/providers/generation_provider.dart';
-import 'core/theme/app_theme.dart';
-import 'core/constants/app_constants.dart';
-import 'core/utils/app_logger.dart';
-import 'core/utils/helpers.dart';
-
-// Shared widgets
-import 'shared/widgets/app_initializer.dart';
-
-/// Main entry point for AssetCraft AI
-///
-/// This new clean architecture features:
-/// 1. Proper Hive database integration
-/// 2. Clean Provider state management
-/// 3. Environment-based configuration
-/// 4. Platform-specific service initialization
-/// 5. Modular feature structure
-void main() async {
-  // Ensure Flutter framework is initialized
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize logging first
-  AppLogger.initialize();
-  AppLogger.info('🚀 Starting AssetCraft AI...');
-
-  // Log platform information
-  _logPlatformInfo();
-
-  // Configure platform-specific settings
-  await _configurePlatform();
-
-  // Initialize core services
-  await _initializeCoreServices();
-
-  // Run the app
-  runApp(const AssetCraftApp());
+void main() {
+  runApp(const MyApp());
 }
 
-/// Configure platform-specific settings
-Future<void> _configurePlatform() async {
-  try {
-    AppLogger.info('🔧 Configuring platform: ${PlatformUtils.platformName}');
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-    // Set portrait orientation for mobile platforms
-    if (PlatformUtils.isMobile) {
-      await PlatformUtils.setPortraitOrientation();
-      AppLogger.info('📱 Portrait orientation set for mobile');
-    }
-
-    // Web-specific configurations
-    if (PlatformUtils.isWeb) {
-      AppLogger.info('🌐 Web platform detected');
-    }
-
-    // Desktop-specific configurations
-    if (PlatformUtils.isDesktop) {
-      AppLogger.info('🖥️ Desktop platform detected');
-    }
-  } catch (e, stackTrace) {
-    AppLogger.error('❌ Platform configuration failed', e, stackTrace);
-  }
-}
-
-/// Initialize core services in the correct order
-Future<void> _initializeCoreServices() async {
-  try {
-    AppLogger.info('🔧 Initializing core services...');
-
-    // 1. Initialize environment configuration
-    await Environment.initialize();
-    AppLogger.info('✅ Environment initialized');
-
-    // Print environment configuration in debug mode
-    if (kDebugMode) {
-      Environment.printConfiguration();
-    }
-
-    // 2. Initialize Hive database
-    await DatabaseService.initialize();
-    AppLogger.info('✅ Database initialized');
-
-    // 3. Initialize external services (async to avoid blocking UI)
-    if (!PlatformUtils.isWeb) {
-      unawaited(_initializeExternalServices());
-    }
-
-    AppLogger.info('✅ Core services initialization complete');
-  } catch (e, stackTrace) {
-    AppLogger.error('❌ Core services initialization failed', e, stackTrace);
-    // Continue anyway - app should still work with limited functionality
-  }
-}
-
-/// Initialize external services asynchronously
-Future<void> _initializeExternalServices() async {
-  try {
-    AppLogger.info('🌐 Initializing external services...');
-
-    await AppServices.initialize().timeout(
-      const Duration(seconds: 30),
-      onTimeout: () {
-        AppLogger.warning('⏰ External services initialization timed out');
-      },
-    );
-
-    AppLogger.info('✅ External services initialized');
-  } catch (e, stackTrace) {
-    AppLogger.warning(
-      '⚠️ External services initialization failed (app will continue)',
-      e,
-      stackTrace,
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // TRY THIS: Try running your application with "flutter run". You'll see
+        // the application has a purple toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.green
+        // and then invoke "hot reload" (save your changes or press the "hot
+        // reload" button in a Flutter-supported IDE, or press "r" if you used
+        // the command line to start the app).
+        //
+        // Notice that the counter didn't reset back to zero; the application
+        // state is not lost during the reload. To reset the state, use hot
+        // restart instead.
+        //
+        // This works for code too, not just values: Most code changes can be
+        // tested with just a hot reload.
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-/// Log platform information for debugging
-void _logPlatformInfo() {
-  if (kDebugMode) {
-    AppLogger.debug('🔧 ========== PLATFORM INFO ==========');
-    AppLogger.debug('📱 Platform: ${PlatformUtils.platformName}');
-    AppLogger.debug('🌐 Is Web: ${PlatformUtils.isWeb}');
-    AppLogger.debug('📱 Is Mobile: ${PlatformUtils.isMobile}');
-    AppLogger.debug('🖥️ Is Desktop: ${PlatformUtils.isDesktop}');
-    AppLogger.debug('🛠️ Is Debug: $kDebugMode');
-    AppLogger.debug('🏗️ Is Profile: $kProfileMode');
-    AppLogger.debug('🚀 Is Release: $kReleaseMode');
-    AppLogger.debug('🔧 ===================================');
-  }
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
+  final String title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-/// Main application widget with Provider state management
-class AssetCraftApp extends StatelessWidget {
-  const AssetCraftApp({super.key});
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
+
+  void _incrementCounter() {
+    setState(() {
+      // This call to setState tells the Flutter framework that something has
+      // changed in this State, which causes it to rerun the build method below
+      // so that the display can reflect the updated values. If we changed
+      // _counter without calling setState(), then the build method would not be
+      // called again, and so nothing would appear to happen.
+      _counter++;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        // Core providers
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => AssetsProvider()),
-        ChangeNotifierProvider(create: (_) => GenerationProvider()),
-
-        // Add more providers as features are implemented
-      ],
-      child: MaterialApp(
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
-
-        // Theme configuration
-        theme: AppTheme.lightTheme.copyWith(
-          textTheme: GoogleFonts.interTextTheme(AppTheme.lightTheme.textTheme),
-        ),
-        darkTheme: AppTheme.darkTheme.copyWith(
-          textTheme: GoogleFonts.interTextTheme(AppTheme.darkTheme.textTheme),
-        ),
-        themeMode: ThemeMode.system,
-
-        // Use AppInitializer to handle startup flow
-        home: const AppInitializer(),
-
-        // Global error handling
-        builder: (context, widget) {
-          // Handle text scaling
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.linear(
-                MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.2),
-              ),
-            ),
-            child: widget ?? const SizedBox.shrink(),
-          );
-        },
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
+    return Scaffold(
+      appBar: AppBar(
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
       ),
+      body: Center(
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
+        child: Column(
+          // Column is also a layout widget. It takes a list of children and
+          // arranges them vertically. By default, it sizes itself to fit its
+          // children horizontally, and tries to be as tall as its parent.
+          //
+          // Column has various properties to control how it sizes itself and
+          // how it positions its children. Here we use mainAxisAlignment to
+          // center the children vertically; the main axis here is the vertical
+          // axis because Columns are vertical (the cross axis would be
+          // horizontal).
+          //
+          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+          // action in the IDE, or press "p" in the console), to see the
+          // wireframe for each widget.
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text('You have pushed the button this many times:'),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
+      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

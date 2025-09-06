@@ -1,6 +1,6 @@
 {
-    "name": "assetcraft_ai",
-    "short_name": "assetcraft_ai",
+    "name": "assetcraft_ai_v2",
+    "short_name": "assetcraft_ai_v2",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
