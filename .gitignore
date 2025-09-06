@@ -1,3 +1,5 @@
+# 🚀 AssetCraft AI - Enhanced Git Ignore Configuration
+
 # Miscellaneous
 *.class
 *.log
@@ -17,6 +19,31 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
+
+# 🔐 Environment & Security Files
+.env
+.env.local
+.env.development
+.env.production
+*.pem
+*.key
+*.p12
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# 🔑 API Keys & Secrets
+**/secrets/
+**/config/secrets/
+api_keys.dart
+
+# 🗄️ Database & Local Storage
+*.db
+*.sqlite
+*.sqlite3
+*.hive
+/data/
+user_data/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
