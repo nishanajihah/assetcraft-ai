@@ -1,14 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/ai_generation_provider.dart';
+import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
-import '../core/services/ai_image_service.dart';
-import '../core/utils/logger.dart';
-import '../usable/widgets/containers/enhanced_containers.dart';
-import '../usable/widgets/buttons/enhanced_buttons.dart';
-import '../usable/widgets/inputs/enhanced_inputs.dart';
+import '../core/widgets/widget_wrappers.dart';
 
 /// AI Generation Screen
 ///
@@ -206,7 +202,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
 
                   return AssetTypeCard(
                     title: assetType['title'],
-                    description: assetType['description'],
+                    subtitle: assetType['description'],
                     icon: assetType['icon'],
                     isSelected: isSelected,
                     onTap: () {
@@ -447,7 +443,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     );
   }
 
-  Widget _buildGeneratedImageView(Uint8List imageData) {
+  Widget _buildGeneratedImageView(String imageBase64) {
     return Column(
       children: [
         Expanded(
@@ -456,7 +452,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               child: Image.memory(
-                imageData,
+                base64Decode(imageBase64),
                 fit: BoxFit.contain,
                 width: double.infinity,
               ),
@@ -646,10 +642,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     if (_selectedAssetType == null) return;
 
     final provider = Provider.of<AIGenerationProvider>(context, listen: false);
-    await provider.generateSuggestions(
-      assetType: _selectedAssetType!,
-      style: _selectedStyle,
-    );
+    await provider.generateSuggestions();
   }
 
   Future<void> _generateImage(
@@ -667,14 +660,11 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     final enhancedPrompt = _buildEnhancedPrompt(colorName);
 
     try {
-      await aiProvider.generateImage(
-        prompt: enhancedPrompt,
-        assetType: _selectedAssetType!,
-      );
+      await aiProvider.generateImage(customPrompt: enhancedPrompt);
 
       if (aiProvider.generatedImage != null) {
         // Deduct gemstone
-        await userProvider.spendGemstones(1);
+        userProvider.spendGemstones(1);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -766,7 +756,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
   void _saveToLibrary() {
     final provider = Provider.of<AIGenerationProvider>(context, listen: false);
     if (provider.generatedImage != null) {
-      provider.saveToLibrary(_promptController.text, _selectedAssetType!);
+      provider.saveToLibrary(provider.generatedImage!);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

@@ -77,13 +77,13 @@ class AssetCraftAIApp extends StatelessWidget {
     return MaterialApp(
       title: 'AssetCraft AI',
       debugShowCheckedModeBanner: false,
-      
+
       // Enhanced theme with neomorphic design
       theme: AppTheme.goldTheme,
-      
+
       // Home screen
       home: const AssetCraftHomePage(),
-      
+
       // Error handling
       builder: (context, widget) {
         return MediaQuery(
@@ -146,7 +146,11 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
         }
       } catch (e) {
         _initializationError = e.toString();
-        AppLogger.error('App initialization check failed', tag: 'Main', error: e);
+        AppLogger.error(
+          'App initialization check failed',
+          tag: 'Main',
+          error: e,
+        );
       }
     });
   }
@@ -177,10 +181,7 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
               height: 120,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryGold,
-                    AppColors.primaryGoldLight,
-                  ],
+                  colors: [AppColors.primaryGold, AppColors.primaryGoldLight],
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -231,11 +232,7 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 80,
-                color: AppColors.error,
-              ),
+              Icon(Icons.error_outline, size: 80, color: AppColors.error),
               const SizedBox(height: 24),
               Text(
                 'Initialization Error',

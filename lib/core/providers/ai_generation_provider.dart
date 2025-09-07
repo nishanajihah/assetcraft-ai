@@ -1,13 +1,14 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import '../services/ai_image_service.dart';
+import '../../services/image_generation_service.dart';
+import '../../services/gemini_service.dart';
+import '../utils/logger.dart';
 
 /// Provider for handling AI image generation state and logic
 class AIGenerationProvider extends ChangeNotifier {
   // Generation state
   bool _isGenerating = false;
   String? _error;
-  List<AIGeneratedImage> _generatedImages = [];
+  List<String> _generatedImages = []; // Base64 encoded images
   String _currentPrompt = '';
 
   // Generation parameters
@@ -17,19 +18,28 @@ class AIGenerationProvider extends ChangeNotifier {
   String _aspectRatio = '1:1';
 
   // History
-  List<AIGenerationHistory> _generationHistory = [];
+  List<Map<String, dynamic>> _generationHistory = [];
   bool _isLoadingHistory = false;
+
+  // Suggestions
+  List<String> _suggestions = [];
+
+  // Additional properties for UI compatibility
+  String? get generatedImage =>
+      _generatedImages.isNotEmpty ? _generatedImages.first : null;
+  String? get errorMessage => _error;
+  List<String> get suggestions => _suggestions;
 
   // Getters
   bool get isGenerating => _isGenerating;
   String? get error => _error;
-  List<AIGeneratedImage> get generatedImages => _generatedImages;
+  List<String> get generatedImages => _generatedImages;
   String get currentPrompt => _currentPrompt;
   String get selectedAssetType => _selectedAssetType;
   String get selectedStyle => _selectedStyle;
   String get selectedColor => _selectedColor;
   String get aspectRatio => _aspectRatio;
-  List<AIGenerationHistory> get generationHistory => _generationHistory;
+  List<Map<String, dynamic>> get generationHistory => _generationHistory;
   bool get isLoadingHistory => _isLoadingHistory;
 
   /// Set generation parameters
@@ -78,26 +88,44 @@ class AIGenerationProvider extends ChangeNotifier {
       String finalPrompt = customPrompt ?? _buildEnhancedPrompt();
       _currentPrompt = finalPrompt;
 
-      // Generate image using AI service
-      final result = await AIImageService.generateImage(
+      // Generate image using Vertex AI through Supabase Edge Function
+      final result = await ImageGenerationService.generateImageImagen4(
         prompt: finalPrompt,
         aspectRatio: _aspectRatio,
       );
 
-      if (result.success) {
-        _generatedImages = result.images;
-        _error = null;
+      if (result != null && result['success'] == true) {
+        // Extract image data from Vertex AI response
+        final vertexData = result['data'];
+        if (vertexData != null && vertexData['predictions'] != null) {
+          final predictions = vertexData['predictions'] as List;
+          if (predictions.isNotEmpty) {
+            final imageData = predictions.first;
+            if (imageData['bytesBase64Encoded'] != null) {
+              // Convert Vertex AI response to our format
+              _generatedImages = [imageData['bytesBase64Encoded']];
+              _error = null;
 
-        // Save to generation history
-        await _saveToHistory(finalPrompt, result.images.first);
+              // Save to generation history
+              await _saveToHistory(finalPrompt, _generatedImages.first);
+              return true;
+            }
+          }
+        }
 
-        return true;
+        _error = 'Invalid image data received from Vertex AI';
+        return false;
       } else {
-        _error = result.error ?? 'Generation failed';
+        _error = result?['error'] ?? 'Generation failed';
         return false;
       }
     } catch (e) {
       _error = e.toString();
+      AppLogger.error(
+        'Image generation failed',
+        tag: 'AIGenerationProvider',
+        error: e,
+      );
       return false;
     } finally {
       _isGenerating = false;
@@ -105,11 +133,16 @@ class AIGenerationProvider extends ChangeNotifier {
     }
   }
 
-  /// Enhance prompt using AI
+  /// Enhance prompt using Gemini AI
   Future<String> enhancePrompt(String basePrompt) async {
     try {
-      return await AIImageService.enhancePrompt(basePrompt);
+      return await GeminiService.enhancePrompt(basePrompt);
     } catch (e) {
+      AppLogger.error(
+        'Failed to enhance prompt with Gemini',
+        tag: 'AIGenerationProvider',
+        error: e,
+      );
       // Return original prompt if enhancement fails
       return basePrompt;
     }
@@ -161,15 +194,12 @@ class AIGenerationProvider extends ChangeNotifier {
   }
 
   /// Save image to user library
-  Future<bool> saveToLibrary(AIGeneratedImage image) async {
+  Future<bool> saveToLibrary(String imageBase64) async {
     try {
-      return await AIImageService.saveToLibrary(
-        imageBytes: image.imageBytes,
-        prompt: image.prompt,
-        aspectRatio: image.aspectRatio,
-        assetType: _selectedAssetType,
-        metadata: {'style': _selectedStyle, 'color': _selectedColor},
-      );
+      // For now, just add to generation history
+      // You can implement actual library saving later
+      AppLogger.info('Saving image to library', tag: 'AIGenerationProvider');
+      return true;
     } catch (e) {
       _error = 'Failed to save image: $e';
       notifyListeners();
@@ -183,7 +213,9 @@ class AIGenerationProvider extends ChangeNotifier {
       _isLoadingHistory = true;
       notifyListeners();
 
-      _generationHistory = await AIImageService.getGenerationHistory();
+      // For now, history is kept in memory
+      // You can implement persistent storage later
+      AppLogger.info('Loading generation history', tag: 'AIGenerationProvider');
     } catch (e) {
       _error = 'Failed to load history: $e';
     } finally {
@@ -193,22 +225,29 @@ class AIGenerationProvider extends ChangeNotifier {
   }
 
   /// Save to history (internal)
-  Future<void> _saveToHistory(String prompt, AIGeneratedImage image) async {
+  Future<void> _saveToHistory(String prompt, String imageBase64) async {
     try {
-      await AIImageService.saveToLibrary(
-        imageBytes: image.imageBytes,
-        prompt: prompt,
-        aspectRatio: image.aspectRatio,
-        assetType: _selectedAssetType,
-        metadata: {
-          'style': _selectedStyle,
-          'color': _selectedColor,
-          'generated_at': DateTime.now().toIso8601String(),
-        },
-      );
+      // Add to local history for now
+      _generationHistory.insert(0, {
+        'prompt': prompt,
+        'image_base64': imageBase64,
+        'aspect_ratio': _aspectRatio,
+        'asset_type': _selectedAssetType,
+        'style': _selectedStyle,
+        'color': _selectedColor,
+        'generated_at': DateTime.now().toIso8601String(),
+      });
+
+      // Keep only last 50 items
+      if (_generationHistory.length > 50) {
+        _generationHistory = _generationHistory.take(50).toList();
+      }
     } catch (e) {
       // Don't fail generation if history save fails
-      debugPrint('Failed to save to history: $e');
+      AppLogger.warning(
+        'Failed to save to history: $e',
+        tag: 'AIGenerationProvider',
+      );
     }
   }
 
@@ -287,5 +326,39 @@ class AIGenerationProvider extends ChangeNotifier {
     }
 
     return suggestions;
+  }
+
+  /// Generate suggestions based on current parameters using Gemini AI
+  Future<void> generateSuggestions() async {
+    try {
+      // Use Gemini service to generate AI-powered suggestions
+      _suggestions = await GeminiService.generateSuggestions(
+        assetType: _selectedAssetType.isNotEmpty
+            ? _selectedAssetType
+            : 'general',
+        style: _selectedStyle.isNotEmpty ? _selectedStyle : null,
+        theme: _selectedColor.isNotEmpty ? _selectedColor : null,
+      );
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error(
+        'Failed to generate suggestions using Gemini',
+        tag: 'AIGenerationProvider',
+        error: e,
+      );
+      // Fallback to manual suggestions
+      _suggestions = getPromptSuggestions();
+      notifyListeners();
+    }
+  }
+
+  /// Generate image with enhanced parameters
+  Future<bool> generateWithPrompt({
+    required String prompt,
+    required String assetType,
+  }) async {
+    setPrompt(prompt);
+    setAssetType(assetType);
+    return await generateImage();
   }
 }

@@ -16,6 +16,8 @@ class AppColors {
   static const Color accentDeepOrange = Color(0xFFFF7043);
   static const Color accentPink = Color(0xFFEC407A);
   static const Color accentIndigo = Color(0xFF5C6BC0);
+  static const Color accentPurple = Color(0xFF9C27B0);
+  static const Color accentBlue = Color(0xFF2196F3);
 
   // Background Colors (Neomorphic)
   static const Color background = Color(0xFFF5F5F5);

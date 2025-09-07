@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
-import 'enhanced_ai_generation_screen.dart';
+import 'ai_generation_screen.dart';
 import 'gallery_screen.dart';
 import 'store_screen.dart';
 import 'user_management_screen.dart';
@@ -23,7 +23,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    EnhancedAIGenerationScreen(),
+    AIGenerationScreen(),
     GalleryScreen(),
     StoreScreen(),
     UserManagementScreen(),
