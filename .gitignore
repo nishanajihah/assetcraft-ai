@@ -70,3 +70,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 🗄️ Supabase CLI temporary files (should not be committed)
+supabase/.temp/
+supabase/.branches/
+
+# 📝 Markdown files (except README.md)
+*.md
+!README.md
