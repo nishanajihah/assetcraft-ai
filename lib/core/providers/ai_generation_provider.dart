@@ -89,31 +89,22 @@ class AIGenerationProvider extends ChangeNotifier {
       _currentPrompt = finalPrompt;
 
       // Generate image using Vertex AI through Supabase Edge Function
-      final result = await ImageGenerationService.generateImageImagen4(
+      final result = await ImageGenerationService.generateImageWithVertexAI(
         prompt: finalPrompt,
-        aspectRatio: _aspectRatio,
       );
 
       if (result != null && result['success'] == true) {
-        // Extract image data from Vertex AI response
-        final vertexData = result['data'];
-        if (vertexData != null && vertexData['predictions'] != null) {
-          final predictions = vertexData['predictions'] as List;
-          if (predictions.isNotEmpty) {
-            final imageData = predictions.first;
-            if (imageData['bytesBase64Encoded'] != null) {
-              // Convert Vertex AI response to our format
-              _generatedImages = [imageData['bytesBase64Encoded']];
-              _error = null;
+        // Image data is already extracted and formatted by the service
+        if (result['imageBase64'] != null) {
+          _generatedImages = [result['imageBase64']];
+          _error = null;
 
-              // Save to generation history
-              await _saveToHistory(finalPrompt, _generatedImages.first);
-              return true;
-            }
-          }
+          // Save to generation history
+          await _saveToHistory(finalPrompt, _generatedImages.first);
+          return true;
         }
 
-        _error = 'Invalid image data received from Vertex AI';
+        _error = 'Invalid image data received from service';
         return false;
       } else {
         _error = result?['error'] ?? 'Generation failed';

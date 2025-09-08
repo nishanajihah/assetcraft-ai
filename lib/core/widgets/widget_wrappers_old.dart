@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../usable/widgets/buttons/enhanced_buttons.dart';
-import '../../usable/widgets/containers/enhanced_containers.dart';
-import '../../usable/widgets/inputs/enhanced_inputs.dart';
+import '../../ui/widgets/buttons/enhanced_buttons.dart';
+import '../../ui/widgets/containers/enhanced_containers.dart';
+import '../../ui/widgets/inputs/enhanced_inputs.dart';
 
 /// Button variants for consistency across the app
 enum ButtonVariant { primary, secondary, outline }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -76,7 +77,9 @@ class AssetCraftAIApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AssetCraft AI',
-      debugShowCheckedModeBanner: false,
+
+      // Debug banner is disabled in release builds and can be toggled in debug
+      debugShowCheckedModeBanner: kDebugMode ? false : false,
 
       // Enhanced theme with neomorphic design
       theme: AppTheme.goldTheme,

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/providers/ai_generation_provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
-import '../core/widgets/widget_wrappers.dart';
+import '../ui/components/app_components.dart';
 
 /// AI Generation Screen
 ///

@@ -1,13 +1,20 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 
 /// Enhanced Logger for AssetCraft AI
 ///
 /// Provides structured logging with different levels and easy debugging
+/// Logs are only shown in debug mode (development) and suppressed in release builds
 class AppLogger {
   static const String _appName = 'AssetCraft AI';
 
+  /// Check if we should log based on build mode
+  static bool get _shouldLog => kDebugMode;
+
   /// Log info messages
   static void info(String message, {String? tag, Object? data}) {
+    if (!_shouldLog) return;
+
     final logTag = tag ?? 'INFO';
     developer.log(
       message,
@@ -17,8 +24,10 @@ class AppLogger {
     );
   }
 
-  /// Log debug messages
+  /// Log debug messages (only in development)
   static void debug(String message, {String? tag, Object? data}) {
+    if (!_shouldLog) return;
+
     final logTag = tag ?? 'DEBUG';
     developer.log(
       message,
@@ -30,6 +39,8 @@ class AppLogger {
 
   /// Log warning messages
   static void warning(String message, {String? tag, Object? data}) {
+    if (!_shouldLog) return;
+
     final logTag = tag ?? 'WARNING';
     developer.log(
       message,
@@ -39,7 +50,7 @@ class AppLogger {
     );
   }
 
-  /// Log error messages
+  /// Log error messages (always shown, even in production for crash reports)
   static void error(
     String message, {
     String? tag,
@@ -58,6 +69,8 @@ class AppLogger {
 
   /// Log success messages
   static void success(String message, {String? tag, Object? data}) {
+    if (!_shouldLog) return;
+
     final logTag = tag ?? 'SUCCESS';
     developer.log(
       message,
@@ -67,8 +80,10 @@ class AppLogger {
     );
   }
 
-  /// Log API calls
+  /// Log API calls (only in development)
   static void api(String method, String endpoint, {Object? data}) {
+    if (!_shouldLog) return;
+
     developer.log(
       '$method $endpoint',
       name: '$_appName - API',
