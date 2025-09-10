@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
-import '../core/widgets/app_widgets.dart';
+import '../ui/components/app_components.dart';
 
 /// User Management Screen
 ///

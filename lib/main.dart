@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
+import 'core/services/app_initialization_service.dart';
+import 'core/providers/ai_generation_provider.dart';
+import 'core/providers/user_provider.dart';
+import 'core/providers/gallery_provider.dart';
+import 'core/providers/store_provider.dart';
 import 'screens/main_navigation_screen.dart';
 
 /// AssetCraft AI - Premium AI Asset Generation App
@@ -16,53 +18,17 @@ import 'screens/main_navigation_screen.dart';
 /// - Responsive neomorphic design
 /// - Supabase Edge Functions integration
 /// - Enhanced logging and error handling
+/// - Environment-based configuration
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
+  // Initialize all app services using the centralized service
+  final initSuccess = await AppInitializationService.initialize();
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
-
-  AppLogger.info('🚀 Starting AssetCraft AI initialization', tag: 'Main');
-
-  try {
-    // Initialize Firebase
-    await Firebase.initializeApp();
-    AppLogger.success('✅ Firebase initialized successfully', tag: 'Main');
-
-    // Initialize Supabase with production credentials
-    await Supabase.initialize(
-      url: 'https://rmtqskaeyetecgpckrsg.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtdHFza2FleWV0ZWNncGNrcnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0OTE2MjMsImV4cCI6MjA3MTA2NzYyM30.OwhEB_FO-l34M9hpTxhXgrW93RmxKzfiBFekO4EJID8',
-    );
-    AppLogger.success('✅ Supabase initialized successfully', tag: 'Main');
-
-    // Initialize Mobile Ads
-    await MobileAds.instance.initialize();
-    AppLogger.success('✅ Mobile Ads initialized successfully', tag: 'Main');
-
-    AppLogger.success('🎉 All services initialized successfully', tag: 'Main');
-  } catch (e, stackTrace) {
+  if (!initSuccess) {
     AppLogger.error(
-      '❌ Failed to initialize services',
+      '❌ Failed to initialize app: ${AppInitializationService.initializationError}',
       tag: 'Main',
-      error: e,
-      stackTrace: stackTrace,
     );
   }
 
@@ -75,30 +41,38 @@ class AssetCraftAIApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AssetCraft AI',
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AIGenerationProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => GalleryProvider()),
+        ChangeNotifierProvider(create: (_) => StoreProvider()),
+      ],
+      child: MaterialApp(
+        title: 'AssetCraft AI',
 
-      // Debug banner is disabled in release builds and can be toggled in debug
-      debugShowCheckedModeBanner: kDebugMode ? false : false,
+        // Debug banner is disabled in release builds and can be toggled in debug
+        debugShowCheckedModeBanner: kDebugMode ? false : false,
 
-      // Enhanced theme with neomorphic design
-      theme: AppTheme.goldTheme,
+        // Enhanced theme with neomorphic design
+        theme: AppTheme.goldTheme,
 
-      // Home screen
-      home: const AssetCraftHomePage(),
+        // Home screen
+        home: const AssetCraftHomePage(),
 
-      // Error handling
-      builder: (context, widget) {
-        return MediaQuery(
-          // Fix text scaling for better responsive design
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(
-              MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.2),
+        // Error handling
+        builder: (context, widget) {
+          return MediaQuery(
+            // Fix text scaling for better responsive design
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(
+                MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.2),
+              ),
             ),
-          ),
-          child: widget ?? const SizedBox.shrink(),
-        );
-      },
+            child: widget ?? const SizedBox.shrink(),
+          );
+        },
+      ),
     );
   }
 }
@@ -137,15 +111,19 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
   void _checkInitialization() {
     setState(() {
       try {
-        // Check if Supabase is properly initialized
-        final supabaseClient = Supabase.instance.client;
-        if (supabaseClient.auth.currentUser != null ||
-            supabaseClient.realtime.channels.isNotEmpty ||
-            true) {
-          // Basic check - if we can access the client, it's initialized
-          _isInitialized = true;
-          _initializationError = null;
+        // Check if the initialization service is properly initialized
+        _isInitialized = AppInitializationService.isInitialized;
+        _initializationError = AppInitializationService.initializationError;
+
+        if (_isInitialized) {
           AppLogger.success('App initialization check passed', tag: 'Main');
+        } else if (_initializationError != null) {
+          AppLogger.error(
+            'App initialization failed: $_initializationError',
+            tag: 'Main',
+          );
+        } else {
+          AppLogger.info('App is still initializing...', tag: 'Main');
         }
       } catch (e) {
         _initializationError = e.toString();

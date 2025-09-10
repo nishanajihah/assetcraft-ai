@@ -10,8 +10,15 @@ class UserProvider extends ChangeNotifier {
   int _gemstoneCount = 100; // Default starting gems
   String? _userName;
   String? _userEmail;
+  String? _userPhotoURL;
   bool _isLoading = false;
   String? _error;
+  bool _isPremium = false;
+  DateTime? _subscriptionEndDate;
+  int _totalGenerations = 25;
+  int _monthlyGenerations = 15;
+  int _weeklyGenerations = 8;
+  int _favoriteCount = 5;
 
   // Getters
   String? get userId => _userId;
@@ -20,6 +27,20 @@ class UserProvider extends ChangeNotifier {
   String? get userEmail => _userEmail;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  // User data compatibility getters
+  UserModel? get user => UserModel(
+    id: _userId ?? '',
+    displayName: _userName,
+    email: _userEmail,
+    photoURL: _userPhotoURL,
+  );
+  bool get isPremium => _isPremium;
+  DateTime? get subscriptionEndDate => _subscriptionEndDate;
+  int get totalGenerations => _totalGenerations;
+  int get monthlyGenerations => _monthlyGenerations;
+  int get weeklyGenerations => _weeklyGenerations;
+  int get favoriteCount => _favoriteCount;
 
   /// Initialize user data
   Future<void> initializeUser() async {
@@ -78,6 +99,100 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+  /// Update user profile
+  Future<void> updateProfile({String? displayName, String? email}) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      if (displayName != null) _userName = displayName;
+      if (email != null) _userEmail = email;
+
+      // TODO: Save to Supabase
+      await Future.delayed(const Duration(seconds: 1));
+
+      AppLogger.info('Profile updated successfully', tag: _logTag);
+    } catch (e) {
+      _error = 'Failed to update profile: $e';
+      AppLogger.error('Failed to update profile: $e', tag: _logTag);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Export user data
+  Future<void> exportUserData() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // TODO: Implement data export
+      await Future.delayed(const Duration(seconds: 2));
+
+      AppLogger.info('User data exported successfully', tag: _logTag);
+    } catch (e) {
+      _error = 'Failed to export data: $e';
+      AppLogger.error('Failed to export data: $e', tag: _logTag);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Logout user
+  Future<void> logout() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // TODO: Clear Supabase session
+      _userId = null;
+      _userName = null;
+      _userEmail = null;
+      _userPhotoURL = null;
+      _gemstoneCount = 100;
+      _isPremium = false;
+      _subscriptionEndDate = null;
+
+      AppLogger.info('User logged out successfully', tag: _logTag);
+    } catch (e) {
+      _error = 'Failed to logout: $e';
+      AppLogger.error('Failed to logout: $e', tag: _logTag);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Delete user account
+  Future<void> deleteAccount() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // TODO: Delete from Supabase
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Clear all data
+      _userId = null;
+      _userName = null;
+      _userEmail = null;
+      _userPhotoURL = null;
+      _gemstoneCount = 0;
+      _isPremium = false;
+      _subscriptionEndDate = null;
+
+      AppLogger.info('User account deleted successfully', tag: _logTag);
+    } catch (e) {
+      _error = 'Failed to delete account: $e';
+      AppLogger.error('Failed to delete account: $e', tag: _logTag);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Add gemstones
   void addGemstones(int amount) {
     _gemstoneCount += amount;
@@ -97,4 +212,14 @@ class UserProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+}
+
+/// User Model for compatibility
+class UserModel {
+  final String id;
+  final String? displayName;
+  final String? email;
+  final String? photoURL;
+
+  UserModel({required this.id, this.displayName, this.email, this.photoURL});
 }

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/providers/gallery_provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
-import '../core/widgets/app_widgets.dart';
+import '../ui/components/app_components.dart';
 import '../core/models/asset_model.dart';
 
 /// Gallery Screen
@@ -111,7 +111,13 @@ class _GalleryScreenState extends State<GalleryScreen>
           ),
           Consumer<UserProvider>(
             builder: (context, userProvider, child) {
-              return GemstoneCounter(count: userProvider.gemstoneCount);
+              return GoldButton(
+                text: '${userProvider.gemstoneCount}',
+                icon: Icons.diamond,
+                onPressed: () {
+                  // Navigate to store
+                },
+              );
             },
           ),
         ],
@@ -246,8 +252,8 @@ class _GalleryScreenState extends State<GalleryScreen>
       onRefresh: () => provider.loadUserAssets(),
       color: AppColors.primaryGold,
       child: _buildAssetGrid(
-        provider.filteredUserAssets,
-        provider.isLoadingUserAssets,
+        provider.userAssets,
+        provider.isLoading,
         'Your library is empty',
         'Create your first AI asset!',
       ),
@@ -259,8 +265,8 @@ class _GalleryScreenState extends State<GalleryScreen>
       onRefresh: () => provider.loadCommunityAssets(),
       color: AppColors.primaryGold,
       child: _buildAssetGrid(
-        provider.filteredCommunityAssets,
-        provider.isLoadingCommunityAssets,
+        provider.communityAssets,
+        provider.isLoading,
         'No community assets found',
         'Be the first to share your creation!',
       ),
@@ -375,7 +381,7 @@ class _GalleryScreenState extends State<GalleryScreen>
 
               // Asset info
               Text(
-                asset.prompt,
+                asset.prompt ?? 'AI Generated Asset',
                 style: AppTextStyles.bodySmall.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -397,7 +403,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      asset.assetType.toUpperCase(),
+                      (asset.assetType ?? asset.category).toUpperCase(),
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.primaryGold,
                         fontWeight: FontWeight.w600,
@@ -446,7 +452,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    asset.prompt,
+                    asset.prompt ?? 'AI Generated Asset',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -468,7 +474,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          asset.assetType.toUpperCase(),
+                          (asset.assetType ?? asset.category).toUpperCase(),
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.primaryGold,
                             fontWeight: FontWeight.w600,
@@ -593,12 +599,13 @@ class _GalleryScreenState extends State<GalleryScreen>
 
   void _onSearchChanged(String query) {
     final provider = Provider.of<GalleryProvider>(context, listen: false);
-    provider.searchAssets(query);
+    provider.setSearchQuery(query);
   }
 
   void _applyFilters() {
     final provider = Provider.of<GalleryProvider>(context, listen: false);
-    provider.filterAssets(_selectedFilter, _selectedSort);
+    provider.setFilter(_selectedFilter);
+    provider.setSort(_selectedSort);
   }
 
   void _openAssetDetail(AssetModel asset) {
@@ -674,7 +681,7 @@ class _GalleryScreenState extends State<GalleryScreen>
 
   void _toggleFavorite(AssetModel asset) {
     final provider = Provider.of<GalleryProvider>(context, listen: false);
-    provider.toggleFavorite(asset.id);
+    provider.toggleFavorite(asset);
   }
 
   void _shareAsset(AssetModel asset) {
@@ -721,7 +728,7 @@ class _GalleryScreenState extends State<GalleryScreen>
 
   void _deleteAsset(AssetModel asset) {
     final provider = Provider.of<GalleryProvider>(context, listen: false);
-    provider.deleteAsset(asset.id);
+    provider.deleteAsset(asset);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -839,7 +846,10 @@ class AssetDetailScreen extends StatelessWidget {
 
                     SizedBox(height: AppDimensions.spacingSmall),
 
-                    Text(asset.prompt, style: AppTextStyles.bodyMedium),
+                    Text(
+                      asset.prompt ?? 'AI Generated Asset',
+                      style: AppTextStyles.bodyMedium,
+                    ),
 
                     SizedBox(height: AppDimensions.spacingMedium),
 
@@ -855,7 +865,7 @@ class AssetDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            asset.assetType.toUpperCase(),
+                            (asset.assetType ?? asset.category).toUpperCase(),
                             style: AppTextStyles.caption.copyWith(
                               color: AppColors.primaryGold,
                               fontWeight: FontWeight.w600,

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/providers/store_provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
-import '../core/widgets/app_widgets.dart';
+import '../ui/components/app_components.dart';
 
 /// Store Screen
 ///
@@ -165,9 +165,9 @@ class _StoreScreenState extends State<StoreScreen>
                   mainAxisSpacing: 16,
                   childAspectRatio: 0.8,
                 ),
-                itemCount: provider.gemstonePackages.length,
+                itemCount: provider.gemstonePacks.length,
                 itemBuilder: (context, index) {
-                  final package = provider.gemstonePackages[index];
+                  final package = provider.gemstonePacks[index];
                   return _buildGemstonePackCard(package, provider);
                 },
               ),
@@ -178,11 +178,11 @@ class _StoreScreenState extends State<StoreScreen>
   }
 
   Widget _buildGemstonePackCard(
-    Map<String, dynamic> package,
+    GemstonePackModel package,
     StoreProvider provider,
   ) {
-    final isPopular = package['popular'] ?? false;
-    final isBestValue = package['bestValue'] ?? false;
+    final isPopular = package.isPopular;
+    final isBestValue = package.discount != null && package.discount! > 20;
 
     return Stack(
       children: [
@@ -246,7 +246,7 @@ class _StoreScreenState extends State<StoreScreen>
               SizedBox(height: AppDimensions.spacingMedium),
 
               Text(
-                '${package['gems']} Gems',
+                '${package.gemstoneCount} Gems',
                 style: AppTextStyles.headingSmall.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
@@ -255,9 +255,9 @@ class _StoreScreenState extends State<StoreScreen>
 
               SizedBox(height: AppDimensions.spacingSmall),
 
-              if (package['bonus'] != null)
+              if (package.discount != null && package.discount! > 0)
                 Text(
-                  '+${package['bonus']} Bonus!',
+                  '+${package.discount}% Bonus!',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.accentTeal,
                     fontWeight: FontWeight.w600,
@@ -267,14 +267,14 @@ class _StoreScreenState extends State<StoreScreen>
               SizedBox(height: AppDimensions.spacingMedium),
 
               GoldButton(
-                text: package['price'],
-                onPressed: provider.isPurchasing
+                text: '\$${package.price.toStringAsFixed(2)}',
+                onPressed: provider.isLoading
                     ? null
                     : () => _purchasePackage(package, provider),
                 variant: isPopular
                     ? ButtonVariant.primary
                     : ButtonVariant.secondary,
-                isLoading: provider.isPurchasing,
+                isLoading: provider.isLoading,
               ),
             ],
           ),
@@ -357,9 +357,9 @@ class _StoreScreenState extends State<StoreScreen>
           else
             Expanded(
               child: ListView.builder(
-                itemCount: provider.subscriptionPlans.length,
+                itemCount: provider.subscriptions.length,
                 itemBuilder: (context, index) {
-                  final plan = provider.subscriptionPlans[index];
+                  final plan = provider.subscriptions[index];
                   return _buildSubscriptionCard(plan, provider);
                 },
               ),
@@ -370,11 +370,11 @@ class _StoreScreenState extends State<StoreScreen>
   }
 
   Widget _buildSubscriptionCard(
-    Map<String, dynamic> plan,
+    SubscriptionModel plan,
     StoreProvider provider,
   ) {
-    final features = List<String>.from(plan['features'] ?? []);
-    final isRecommended = plan['recommended'] ?? false;
+    final features = plan.features;
+    final isRecommended = plan.isPopular;
 
     return Container(
       margin: EdgeInsets.only(bottom: AppDimensions.spacingMedium),
@@ -416,14 +416,14 @@ class _StoreScreenState extends State<StoreScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            plan['name'],
+                            plan.name,
                             style: AppTextStyles.headingSmall.copyWith(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            plan['description'],
+                            plan.description,
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -436,14 +436,14 @@ class _StoreScreenState extends State<StoreScreen>
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          plan['price'],
+                          '\$${plan.price.toStringAsFixed(2)}',
                           style: AppTextStyles.headingSmall.copyWith(
                             color: AppColors.primaryGold,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          plan['period'],
+                          plan.period.displayName,
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -486,13 +486,13 @@ class _StoreScreenState extends State<StoreScreen>
                   width: double.infinity,
                   child: GoldButton(
                     text: 'Subscribe',
-                    onPressed: provider.isPurchasing
+                    onPressed: provider.isLoading
                         ? null
                         : () => _subscribeToPlan(plan, provider),
                     variant: isRecommended
                         ? ButtonVariant.primary
                         : ButtonVariant.secondary,
-                    isLoading: provider.isPurchasing,
+                    isLoading: provider.isLoading,
                   ),
                 ),
               ],
@@ -772,13 +772,13 @@ class _StoreScreenState extends State<StoreScreen>
   }
 
   Future<void> _purchasePackage(
-    Map<String, dynamic> package,
+    GemstonePackModel package,
     StoreProvider provider,
   ) async {
     try {
-      final success = await provider.purchaseGemstonePackage(package['id']);
+      final success = await provider.purchaseGemstonesPack(package);
       if (success) {
-        _showPurchaseSuccessDialog(package['gems']);
+        _showPurchaseSuccessDialog(package.gemstoneCount);
       } else {
         _showPurchaseErrorDialog();
       }
@@ -788,13 +788,13 @@ class _StoreScreenState extends State<StoreScreen>
   }
 
   Future<void> _subscribeToPlan(
-    Map<String, dynamic> plan,
+    SubscriptionModel plan,
     StoreProvider provider,
   ) async {
     try {
-      final success = await provider.purchaseSubscription(plan['id']);
+      final success = await provider.purchaseSubscription(plan);
       if (success) {
-        _showSubscriptionSuccessDialog(plan['name']);
+        _showSubscriptionSuccessDialog(plan.name);
       } else {
         _showPurchaseErrorDialog();
       }

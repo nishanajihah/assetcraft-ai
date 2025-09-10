@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Button variants for consistency across the app
-enum ButtonVariant { primary, secondary, outline }
+enum ButtonVariant { primary, secondary, outline, danger }
 
 /// Wrapper functions for enhanced widgets to maintain compatibility
 /// with existing code while using standard Flutter widgets
@@ -32,6 +32,10 @@ Widget GoldButton({
     case ButtonVariant.outline:
       backgroundColor = Colors.transparent;
       textColor = AppColors.primaryGold;
+      break;
+    case ButtonVariant.danger:
+      backgroundColor = Colors.red.shade600;
+      textColor = Colors.white;
       break;
   }
 
