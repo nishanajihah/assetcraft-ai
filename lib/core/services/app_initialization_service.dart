@@ -88,17 +88,14 @@ class AppInitializationService {
         '🌍 Environment: ${AppConfig.environment}',
         tag: 'AppInit',
       );
+      AppLogger.info('� API URL: ${AppConfig.apiUrl}', tag: 'AppInit');
       AppLogger.info(
-        '🐛 Debug Logging: ${AppConfig.enableDebugLogging}',
-        tag: 'AppInit',
-      );
-      AppLogger.info(
-        '📊 Analytics: ${AppConfig.enableAnalytics}',
+        '🤖 Imagen Model: ${AppConfig.imagenModel}',
         tag: 'AppInit',
       );
 
       // Print config summary in debug mode
-      if (AppConfig.enableDebugLogging) {
+      if (kDebugMode) {
         AppConfig.printConfigSummary();
       }
     } catch (e) {
@@ -171,16 +168,23 @@ class AppInitializationService {
 
     final requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 
+    final optionalEnvVars = [
+      'VERTEX_AI_CREDENTIALS',
+      'IMAGEN_MODEL',
+      'GEMINI_API_KEY',
+      'REVENUECAT_ANDROID_KEY',
+    ];
+
     final missingVars = <String>[];
     for (final varName in requiredEnvVars) {
-      if (dotenv.env[varName] == null || dotenv.env[varName]!.isEmpty) {
+      if (AppConfig.getEnvVar(varName).isEmpty) {
         missingVars.add(varName);
       }
     }
 
     if (missingVars.isNotEmpty) {
       AppLogger.warning(
-        '⚠️ Missing environment variables: ${missingVars.join(', ')}',
+        '⚠️ Missing required environment variables: ${missingVars.join(', ')}',
         tag: 'AppInit',
       );
       AppLogger.warning(
@@ -193,6 +197,33 @@ class AppInitializationService {
         tag: 'AppInit',
       );
     }
+
+    // Check optional configurations
+    final missingOptional = <String>[];
+    for (final varName in optionalEnvVars) {
+      if (AppConfig.getEnvVar(varName).isEmpty) {
+        missingOptional.add(varName);
+      }
+    }
+
+    if (missingOptional.isNotEmpty) {
+      AppLogger.info(
+        '💡 Optional configurations not set: ${missingOptional.join(', ')}',
+        tag: 'AppInit',
+      );
+    }
+
+    // Log specific service availability
+    AppLogger.info('🔧 Service Configuration:', tag: 'AppInit');
+    AppLogger.info(
+      '   Vertex AI: ${AppConfig.hasVertexAiCredentials ? "✅ Configured" : "❌ Not configured"}',
+      tag: 'AppInit',
+    );
+    AppLogger.info(
+      '   RevenueCat Android: ${AppConfig.hasRevenueCatAndroid ? "✅ Configured" : "❌ Not configured"}',
+      tag: 'AppInit',
+    );
+    AppLogger.info('   Imagen Model: ${AppConfig.imagenModel}', tag: 'AppInit');
   }
 
   /// Get environment variable with optional default value
@@ -209,13 +240,7 @@ class AppInitializationService {
   static String get environment => AppConfig.environment;
 
   /// Check if debug mode is enabled
-  static bool get isDebugMode => kDebugMode || AppConfig.enableDebugLogging;
-
-  /// Check if analytics is enabled
-  static bool get isAnalyticsEnabled => AppConfig.enableAnalytics;
-
-  /// Check if crashlytics is enabled
-  static bool get isCrashlyticsEnabled => AppConfig.enableCrashlytics;
+  static bool get isDebugMode => kDebugMode;
 
   /// Reset initialization state (for testing purposes)
   static void reset() {

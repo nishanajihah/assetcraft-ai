@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../services/image_generation_service.dart';
 import '../../services/gemini_service.dart';
 import '../utils/logger.dart';
+import '../config/app_config.dart';
 
 /// Provider for handling AI image generation state and logic
 class AIGenerationProvider extends ChangeNotifier {
@@ -41,6 +42,10 @@ class AIGenerationProvider extends ChangeNotifier {
   String get aspectRatio => _aspectRatio;
   List<Map<String, dynamic>> get generationHistory => _generationHistory;
   bool get isLoadingHistory => _isLoadingHistory;
+
+  // Configuration getters
+  String get currentImagenModel => AppConfig.imagenModel;
+  bool get hasVertexAiCredentials => AppConfig.hasVertexAiCredentials;
 
   /// Set generation parameters
   void setAssetType(String assetType) {
@@ -351,5 +356,33 @@ class AIGenerationProvider extends ChangeNotifier {
     setPrompt(prompt);
     setAssetType(assetType);
     return await generateImage();
+  }
+
+  /// Get current AI configuration for debugging
+  Map<String, dynamic> getConfigInfo() {
+    return {
+      'imagenModel': currentImagenModel,
+      'hasVertexAiCredentials': hasVertexAiCredentials,
+      'environment': AppConfig.environment,
+      'isProduction': AppConfig.isProduction,
+    };
+  }
+
+  /// Print configuration summary
+  void printConfigInfo() {
+    final config = getConfigInfo();
+    AppLogger.info('🤖 AI Configuration:', tag: 'AIGenerationProvider');
+    AppLogger.info(
+      '   Imagen Model: ${config['imagenModel']}',
+      tag: 'AIGenerationProvider',
+    );
+    AppLogger.info(
+      '   Has Credentials: ${config['hasVertexAiCredentials']}',
+      tag: 'AIGenerationProvider',
+    );
+    AppLogger.info(
+      '   Environment: ${config['environment']}',
+      tag: 'AIGenerationProvider',
+    );
   }
 }
