@@ -15,10 +15,10 @@ class UserProvider extends ChangeNotifier {
   String? _error;
   bool _isPremium = false;
   DateTime? _subscriptionEndDate;
-  int _totalGenerations = 25;
-  int _monthlyGenerations = 15;
-  int _weeklyGenerations = 8;
-  int _favoriteCount = 5;
+  final int _totalGenerations = 25;
+  final int _monthlyGenerations = 15;
+  final int _weeklyGenerations = 8;
+  final int _favoriteCount = 5;
 
   // Getters
   String? get userId => _userId;
