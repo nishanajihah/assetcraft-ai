@@ -13,9 +13,9 @@ class StoreProvider extends ChangeNotifier {
   String? _error;
   bool _canClaimDailyBonus = true;
   DateTime? _lastDailyBonusClaim;
-  bool _canWatchAd = true;
-  bool _isWatchingAd = false;
-  bool _isClaimingDaily = false;
+  final bool _canWatchAd = true;
+  final bool _isWatchingAd = false;
+  final bool _isClaimingDaily = false;
   DateTime? _lastAdWatch;
 
   // Getters
@@ -36,8 +36,9 @@ class StoreProvider extends ChangeNotifier {
     const cooldown = Duration(minutes: 5); // 5 minute cooldown
     final remaining = cooldown - diff;
     if (remaining.isNegative) return '0s';
-    if (remaining.inHours > 0)
+    if (remaining.inHours > 0) {
       return '${remaining.inHours}h ${remaining.inMinutes % 60}m';
+    }
     return '${remaining.inMinutes}m ${remaining.inSeconds % 60}s';
   }
 

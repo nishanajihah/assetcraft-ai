@@ -2,9 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../utils/logger.dart';
 import '../config/app_config.dart';
 
@@ -38,14 +36,14 @@ class AppInitializationService {
       // Step 2: Set system UI preferences
       await _configureSystemUI();
 
-      // Step 3: Initialize Firebase
-      await _initializeFirebase();
-
-      // Step 4: Initialize Supabase
+      // Step 3: Initialize Supabase (primary backend)
       await _initializeSupabase();
 
-      // Step 5: Initialize Google Mobile Ads
-      await _initializeMobileAds();
+      // Step 4: Initialize OneSignal (skip Firebase since using OneSignal)
+      await _initializeOneSignal();
+
+      // Step 5: Initialize Google Mobile Ads (when ready)
+      // await _initializeMobileAds();
 
       // Step 6: Validate configuration
       await _validateConfiguration();
@@ -132,13 +130,19 @@ class AppInitializationService {
     AppLogger.success('✅ System UI configured successfully', tag: 'AppInit');
   }
 
-  /// Initialize Firebase services
-  static Future<void> _initializeFirebase() async {
-    AppLogger.info('🔥 Initializing Firebase...', tag: 'AppInit');
+  /// Initialize OneSignal for push notifications
+  static Future<void> _initializeOneSignal() async {
+    AppLogger.info('� Initializing OneSignal...', tag: 'AppInit');
 
-    await Firebase.initializeApp();
+    // For now, just log that OneSignal would be initialized
+    // When OneSignal package is added, this will be:
+    // await OneSignal.shared.setAppId(AppConfig.oneSignalAppId);
 
-    AppLogger.success('✅ Firebase initialized successfully', tag: 'AppInit');
+    AppLogger.info(
+      'OneSignal App ID: ${AppConfig.oneSignalAppId}',
+      tag: 'AppInit',
+    );
+    AppLogger.success('✅ OneSignal configuration ready', tag: 'AppInit');
   }
 
   /// Initialize Supabase with environment configuration
@@ -151,15 +155,6 @@ class AppInitializationService {
     );
 
     AppLogger.success('✅ Supabase initialized successfully', tag: 'AppInit');
-  }
-
-  /// Initialize Google Mobile Ads
-  static Future<void> _initializeMobileAds() async {
-    AppLogger.info('📱 Initializing Mobile Ads...', tag: 'AppInit');
-
-    await MobileAds.instance.initialize();
-
-    AppLogger.success('✅ Mobile Ads initialized successfully', tag: 'AppInit');
   }
 
   /// Validate that all required configuration is present

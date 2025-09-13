@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/user_provider.dart';
+import '../core/providers/auth_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../ui/components/app_components.dart';
 
@@ -123,7 +124,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 child: Container(
                   padding: EdgeInsets.all(AppDimensions.paddingSmall),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryGold.withOpacity(0.1),
+                    color: AppColors.primaryGold.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -146,7 +147,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryGold.withOpacity(0.2),
+                    color: AppColors.primaryGold.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(50),
                     border: Border.all(color: AppColors.primaryGold, width: 2),
                   ),
@@ -306,7 +307,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             padding: EdgeInsets.all(AppDimensions.paddingMedium),
             decoration: BoxDecoration(
               color: provider.isPremium
-                  ? AppColors.primaryGold.withOpacity(0.1)
+                  ? AppColors.primaryGold.withValues(alpha: 0.1)
                   : AppColors.surfaceDim,
               borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               border: provider.isPremium
@@ -461,7 +462,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(25),
           ),
           child: Icon(icon, color: color, size: 24),
@@ -519,7 +520,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               onChanged: (value) {
                 // Handle notification toggle
               },
-              activeColor: AppColors.primaryGold,
+              activeThumbColor: AppColors.primaryGold,
             ),
           ),
 
@@ -532,7 +533,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               onChanged: (value) {
                 // Handle auto-save toggle
               },
-              activeColor: AppColors.primaryGold,
+              activeThumbColor: AppColors.primaryGold,
             ),
           ),
 
@@ -580,7 +581,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.primaryGold.withOpacity(0.1),
+          color: AppColors.primaryGold.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Icon(icon, color: AppColors.primaryGold, size: 20),
@@ -713,23 +714,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     try {
       await provider.updateProfile(displayName: _nameController.text);
 
-      setState(() {
-        _isEditing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isEditing = false;
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully!'),
-          backgroundColor: AppColors.accentTeal,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: AppColors.accentTeal,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update profile: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 
@@ -780,22 +785,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
       await provider.exportUserData();
 
-      Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Data export completed! Check your downloads.'),
-          backgroundColor: AppColors.accentTeal,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data export completed! Check your downloads.'),
+            backgroundColor: AppColors.accentTeal,
+          ),
+        );
+      }
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to export data: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export data: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 
@@ -813,7 +822,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _logout(provider);
+              await _logout();
             },
             child: const Text('Log Out'),
           ),
@@ -852,23 +861,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  Future<void> _logout(UserProvider provider) async {
+  Future<void> _logout() async {
     try {
-      await provider.logout();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signOut();
 
-      // Navigate to login screen
-      if (mounted) {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/login', (route) => false);
-      }
+      // Navigation will be handled automatically by main.dart auth state listening
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to log out: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to log out: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 
@@ -891,22 +898,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
       await provider.deleteAccount();
 
-      Navigator.pop(context); // Close loading dialog
-
-      // Navigate to login screen
       if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        // Navigate to login screen
         Navigator.of(
           context,
         ).pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete account: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete account: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 }

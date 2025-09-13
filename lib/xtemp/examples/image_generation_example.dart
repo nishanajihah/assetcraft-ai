@@ -6,8 +6,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 class ImageGenerationExample extends StatefulWidget {
+  const ImageGenerationExample({super.key});
+
   @override
-  _ImageGenerationExampleState createState() => _ImageGenerationExampleState();
+  State<ImageGenerationExample> createState() => _ImageGenerationExampleState();
 }
 
 class _ImageGenerationExampleState extends State<ImageGenerationExample> {

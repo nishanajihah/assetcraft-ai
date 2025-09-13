@@ -213,7 +213,9 @@ class _StoreScreenState extends State<StoreScreen>
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primaryGold.withOpacity(0.4),
+                              color: AppColors.primaryGold.withValues(
+                                alpha: 0.4,
+                              ),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -516,7 +518,7 @@ class _StoreScreenState extends State<StoreScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryGold.withOpacity(0.3),
+                      color: AppColors.primaryGold.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -806,7 +808,7 @@ class _StoreScreenState extends State<StoreScreen>
   Future<void> _watchRewardedAd(StoreProvider provider) async {
     try {
       final success = await provider.watchRewardedAd();
-      if (success) {
+      if (mounted && success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🎉 You earned 2 gemstones!'),
@@ -815,19 +817,21 @@ class _StoreScreenState extends State<StoreScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load ad: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load ad: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _claimDailyBonus(StoreProvider provider) async {
     try {
       final success = await provider.claimDailyBonus();
-      if (success) {
+      if (mounted && success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🎁 Daily bonus claimed! +1 gemstone'),
@@ -836,12 +840,14 @@ class _StoreScreenState extends State<StoreScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to claim bonus: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to claim bonus: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 
@@ -849,19 +855,23 @@ class _StoreScreenState extends State<StoreScreen>
     final provider = Provider.of<StoreProvider>(context, listen: false);
     try {
       await provider.restorePurchases();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Purchases restored successfully!'),
-          backgroundColor: AppColors.accentTeal,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Purchases restored successfully!'),
+            backgroundColor: AppColors.accentTeal,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to restore purchases: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to restore purchases: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 

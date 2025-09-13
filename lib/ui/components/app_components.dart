@@ -8,7 +8,7 @@ enum ButtonVariant { primary, secondary, outline, danger }
 /// with existing code while using standard Flutter widgets
 
 /// Gold Button - Simple elevated button with gold styling
-Widget GoldButton({
+Widget goldButton({
   required String text,
   VoidCallback? onPressed,
   bool isLoading = false,
@@ -80,7 +80,7 @@ Widget GoldButton({
 }
 
 /// Neomorphic Container - Simple container with rounded corners and shadow
-Widget NeomorphicContainer({
+Widget neomorphicContainer({
   required Widget child,
   EdgeInsetsGeometry? padding,
   EdgeInsetsGeometry? margin,
@@ -96,20 +96,20 @@ Widget NeomorphicContainer({
       padding: padding,
       decoration: BoxDecoration(
         color: hasGoldTint
-            ? AppColors.primaryGold.withOpacity(0.1)
+            ? AppColors.primaryGold.withValues(alpha: 0.1)
             : AppColors.surface,
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
             color: hasGlow
-                ? AppColors.primaryGold.withOpacity(0.3)
-                : Colors.grey.withOpacity(0.2),
+                ? AppColors.primaryGold.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.2),
             blurRadius: hasGlow ? 8 : 4,
             offset: const Offset(0, 2),
           ),
         ],
         border: hasGoldTint
-            ? Border.all(color: AppColors.primaryGold.withOpacity(0.3))
+            ? Border.all(color: AppColors.primaryGold.withValues(alpha: 0.3))
             : null,
       ),
       child: child,
@@ -118,7 +118,7 @@ Widget NeomorphicContainer({
 }
 
 /// Neomorphic TextField - Simple text field with rounded corners
-Widget NeomorphicTextField({
+Widget neomorphicTextField({
   TextEditingController? controller,
   String? hintText,
   String? labelText,
@@ -151,11 +151,15 @@ Widget NeomorphicTextField({
           : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.primaryGold.withOpacity(0.3)),
+        borderSide: BorderSide(
+          color: AppColors.primaryGold.withValues(alpha: 0.3),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.primaryGold.withOpacity(0.3)),
+        borderSide: BorderSide(
+          color: AppColors.primaryGold.withValues(alpha: 0.3),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -181,12 +185,14 @@ class GemstoneCounter extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primaryGold.withOpacity(0.2),
+          color: AppColors.primaryGold.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primaryGold.withOpacity(0.5)),
+          border: Border.all(
+            color: AppColors.primaryGold.withValues(alpha: 0.5),
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryGold.withOpacity(0.3),
+              color: AppColors.primaryGold.withValues(alpha: 0.3),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -237,20 +243,20 @@ class AssetTypeCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryGold.withOpacity(0.2)
+              ? AppColors.primaryGold.withValues(alpha: 0.2)
               : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? AppColors.primaryGold
-                : Colors.grey.withOpacity(0.3),
+                : Colors.grey.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.primaryGold.withOpacity(0.3)
-                  : Colors.grey.withOpacity(0.1),
+                  ? AppColors.primaryGold.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.1),
               blurRadius: isSelected ? 8 : 4,
               offset: const Offset(0, 2),
             ),
@@ -286,6 +292,103 @@ class AssetTypeCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Backward compatibility aliases (uppercase versions)
+// ignore: non_constant_identifier_names
+Widget GoldButton({
+  required String text,
+  VoidCallback? onPressed,
+  bool isLoading = false,
+  IconData? icon,
+  ButtonVariant variant = ButtonVariant.primary,
+  double? width,
+  double? height,
+}) => goldButton(
+  text: text,
+  onPressed: onPressed,
+  isLoading: isLoading,
+  icon: icon,
+  variant: variant,
+  width: width,
+  height: height,
+);
+
+// ignore: non_constant_identifier_names
+Widget NeomorphicContainer({
+  required Widget child,
+  EdgeInsetsGeometry? padding,
+  EdgeInsetsGeometry? margin,
+  double borderRadius = 16,
+  bool hasGoldTint = false,
+  bool hasGlow = false,
+  VoidCallback? onTap,
+}) => neomorphicContainer(
+  child: child,
+  padding: padding,
+  margin: margin,
+  borderRadius: borderRadius,
+  hasGoldTint: hasGoldTint,
+  hasGlow: hasGlow,
+  onTap: onTap,
+);
+
+// ignore: non_constant_identifier_names
+Widget NeomorphicTextField({
+  TextEditingController? controller,
+  String? hintText,
+  String? labelText,
+  IconData? prefixIcon,
+  IconData? suffixIcon,
+  VoidCallback? onSuffixTap,
+  bool obscureText = false,
+  TextInputType keyboardType = TextInputType.text,
+  int maxLines = 1,
+  ValueChanged<String>? onChanged,
+}) => neomorphicTextField(
+  controller: controller,
+  hintText: hintText,
+  labelText: labelText,
+  prefixIcon: prefixIcon,
+  suffixIcon: suffixIcon,
+  onSuffixTap: onSuffixTap,
+  obscureText: obscureText,
+  keyboardType: keyboardType,
+  maxLines: maxLines,
+  onChanged: onChanged,
+);
+
+/// Primary Button Widget Class
+class PrimaryButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final IconData? icon;
+  final double? width;
+  final double? height;
+
+  const PrimaryButton({
+    super.key,
+    required this.text,
+    this.onPressed,
+    this.isLoading = false,
+    this.icon,
+    this.width,
+    this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return goldButton(
+      text: text,
+      onPressed: onPressed,
+      isLoading: isLoading,
+      icon: icon,
+      variant: ButtonVariant.primary,
+      width: width,
+      height: height,
     );
   }
 }

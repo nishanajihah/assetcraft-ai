@@ -392,7 +392,7 @@ class EnhancedCostContainer extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.backgroundPrimary.withValues(alpha: 0.9),
+            AppColors.background.withValues(alpha: 0.9),
             AppColors.backgroundSecondary.withValues(alpha: 0.6),
             AppColors.primaryGold.withValues(alpha: 0.1),
           ],

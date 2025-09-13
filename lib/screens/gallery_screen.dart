@@ -399,7 +399,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryGold.withOpacity(0.2),
+                      color: AppColors.primaryGold.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -470,7 +470,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryGold.withOpacity(0.2),
+                          color: AppColors.primaryGold.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -534,7 +534,7 @@ class _GalleryScreenState extends State<GalleryScreen>
           Icon(
             Icons.photo_library_outlined,
             size: 80,
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color: AppColors.textSecondary.withValues(alpha: 0.5),
           ),
 
           SizedBox(height: AppDimensions.spacingLarge),
@@ -861,7 +861,7 @@ class AssetDetailScreen extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryGold.withOpacity(0.2),
+                            color: AppColors.primaryGold.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(

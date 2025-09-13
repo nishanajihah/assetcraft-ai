@@ -298,7 +298,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.3),
+                        color: color.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -384,7 +384,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 );
               }
@@ -667,12 +667,14 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
         userProvider.spendGemstones(1);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Generation failed: $e'),
-          backgroundColor: AppColors.accentDeepOrange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Generation failed: $e'),
+            backgroundColor: AppColors.accentDeepOrange,
+          ),
+        );
+      }
     }
   }
 

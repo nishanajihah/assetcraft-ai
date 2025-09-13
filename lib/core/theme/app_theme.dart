@@ -21,6 +21,8 @@ class AppColors {
 
   // Background Colors (Neomorphic)
   static const Color background = Color(0xFFF5F5F5);
+  static const Color backgroundLight = Color(0xFFF8F8F8);
+  static const Color backgroundDark = Color(0xFFE8E8E8);
   static const Color backgroundSecondary = Color(0xFFEFEFEF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceDim = Color(0xFFF0F0F0);
@@ -35,6 +37,7 @@ class AppColors {
   // Text Colors
   static const Color textPrimary = Color(0xFF2C2C2C);
   static const Color textSecondary = Color(0xFF757575);
+  static const Color textTertiary = Color(0xFF9E9E9E);
   static const Color textDisabled = Color(0xFFBDBDBD);
 
   // Shadow Colors (Neomorphic)
@@ -46,6 +49,48 @@ class AppColors {
   static const Color warning = Color(0xFFFF9800);
   static const Color error = Color(0xFFF44336);
   static const Color info = Color(0xFF2196F3);
+
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primaryGold, primaryGoldLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [accentTeal, accentBlue],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Shadows and Glows
+  static const BoxShadow primaryShadow = BoxShadow(
+    color: Color(0x40D4AF37),
+    blurRadius: 16,
+    offset: Offset(0, 8),
+    spreadRadius: 0,
+  );
+
+  static const BoxShadow primaryGlow = BoxShadow(
+    color: Color(0x20D4AF37),
+    blurRadius: 32,
+    offset: Offset(0, 0),
+    spreadRadius: 8,
+  );
+
+  static const BoxShadow neomorphicShadowDark = BoxShadow(
+    color: Color(0x40000000),
+    blurRadius: 10,
+    offset: Offset(5, 5),
+    spreadRadius: 0,
+  );
+
+  static const BoxShadow neomorphicShadowLight = BoxShadow(
+    color: Color(0xFFFFFFFF),
+    blurRadius: 10,
+    offset: Offset(-5, -5),
+    spreadRadius: 0,
+  );
 }
 
 /// Text Styles with golden theme
@@ -141,73 +186,71 @@ class AppDimensions {
   static const double radiusMedium = 12.0;
   static const double radiusLarge = 16.0;
   static const double radiusXLarge = 24.0;
-  static const double radiusCircular = 999.0;
+
+  // Elevation
+  static const double cardElevation = 4.0;
+  static const double buttonElevation = 2.0;
+  static const double appBarElevation = 0.0;
+
+  // Button Heights
+  static const double buttonHeightSmall = 36.0;
+  static const double buttonHeightMedium = 48.0;
+  static const double buttonHeightLarge = 56.0;
 
   // Icon Sizes
   static const double iconSmall = 16.0;
   static const double iconMedium = 24.0;
   static const double iconLarge = 32.0;
-  static const double iconXLarge = 48.0;
-
-  // Button Heights
-  static const double buttonHeightSmall = 32.0;
-  static const double buttonHeightMedium = 44.0;
-  static const double buttonHeightLarge = 56.0;
-
-  // Card/Container
-  static const double cardElevation = 2.0;
-  static const double containerMinHeight = 56.0;
 }
 
-/// Neomorphic shadows for the theme
+/// Enhanced Box Shadows for Neomorphic Design
 class AppShadows {
-  // Neomorphic shadow effects
-  static List<BoxShadow> neomorphicShadow = [
+  // Neomorphic outset shadows (raised elements)
+  static List<BoxShadow> neuOutset({
+    double blurRadius = 10,
+    double offset = 5,
+    double alpha = 0.3,
+  }) => [
     BoxShadow(
-      color: AppColors.shadowDark,
-      offset: const Offset(8, 8),
-      blurRadius: 15,
-      spreadRadius: 1,
-    ),
-    BoxShadow(
-      color: AppColors.shadowLight,
-      offset: const Offset(-8, -8),
-      blurRadius: 15,
-      spreadRadius: 1,
-    ),
-  ];
-
-  // Pressed/Inset neomorphic shadow
-  static List<BoxShadow> neomorphicInset = [
-    BoxShadow(
-      color: AppColors.shadowDark,
-      offset: const Offset(-4, -4),
-      blurRadius: 8,
+      color: AppColors.neuShadowDark.withValues(alpha: alpha),
+      blurRadius: blurRadius,
+      offset: Offset(offset, offset),
       spreadRadius: 0,
     ),
     BoxShadow(
-      color: AppColors.shadowLight,
-      offset: const Offset(4, 4),
-      blurRadius: 8,
+      color: AppColors.neuHighlight.withValues(alpha: 0.9),
+      blurRadius: blurRadius,
+      offset: Offset(-offset / 2, -offset / 2),
       spreadRadius: 0,
     ),
   ];
 
-  // Standard Material shadows
+  // Neomorphic inset shadows (pressed/input elements)
+  static List<BoxShadow> neuInset({
+    double blurRadius = 6,
+    double offset = 3,
+    double alpha = 0.25,
+  }) => [
+    BoxShadow(
+      color: AppColors.neuShadowDark.withValues(alpha: alpha),
+      blurRadius: blurRadius,
+      offset: Offset(offset, offset),
+      spreadRadius: -1,
+    ),
+    BoxShadow(
+      color: AppColors.neuHighlight.withValues(alpha: 0.8),
+      blurRadius: blurRadius / 2,
+      offset: Offset(-offset / 2, -offset / 2),
+      spreadRadius: 0,
+    ),
+  ];
+
+  // Enhanced card shadows
   static List<BoxShadow> cardShadow = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      offset: const Offset(0, 2),
-      blurRadius: 8,
-      spreadRadius: 0,
-    ),
-  ];
-
-  static List<BoxShadow> elevatedShadow = [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.15),
+      color: AppColors.shadowDark.withValues(alpha: 0.1),
+      blurRadius: 10,
       offset: const Offset(0, 4),
-      blurRadius: 12,
       spreadRadius: 0,
     ),
   ];

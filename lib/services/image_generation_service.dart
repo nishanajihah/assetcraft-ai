@@ -13,7 +13,7 @@ class ImageGenerationService {
     try {
       AppLogger.info('Generating image with Vertex AI', tag: _logTag);
       AppLogger.debug(
-        'Prompt: ${prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt}',
+        'Prompt: ${prompt.length > 100 ? '${prompt.substring(0, 100)}...' : prompt}',
         tag: _logTag,
       );
 

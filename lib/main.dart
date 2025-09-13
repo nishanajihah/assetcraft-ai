@@ -9,7 +9,9 @@ import 'core/providers/ai_generation_provider.dart';
 import 'core/providers/user_provider.dart';
 import 'core/providers/gallery_provider.dart';
 import 'core/providers/store_provider.dart';
+import 'core/providers/auth_provider.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/login_screen.dart';
 
 /// AssetCraft AI - Premium AI Asset Generation App
 ///
@@ -43,6 +45,7 @@ class AssetCraftAIApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AIGenerationProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => GalleryProvider()),
@@ -146,7 +149,20 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
       return _buildErrorScreen();
     }
 
-    return const MainNavigationScreen();
+    // Check authentication state
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        if (!authProvider.isInitialized) {
+          return _buildLoadingScreen();
+        }
+
+        if (authProvider.isLoggedIn) {
+          return const MainNavigationScreen();
+        } else {
+          return const LoginScreen();
+        }
+      },
+    );
   }
 
   Widget _buildLoadingScreen() {
@@ -167,7 +183,7 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primaryGold.withOpacity(0.3),
+                    color: AppColors.primaryGold.withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
