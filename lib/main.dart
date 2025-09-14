@@ -10,6 +10,7 @@ import 'core/providers/user_provider.dart';
 import 'core/providers/gallery_provider.dart';
 import 'core/providers/store_provider.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/ad_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/login_screen.dart';
 
@@ -50,6 +51,7 @@ class AssetCraftAIApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => GalleryProvider()),
         ChangeNotifierProvider(create: (_) => StoreProvider()),
+        ChangeNotifierProvider(create: (_) => AdProvider()),
       ],
       child: MaterialApp(
         title: 'AssetCraft AI',

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../../services/image_generation_service.dart';
 import '../../services/gemini_service.dart';
+import '../../services/supabase_storage_service.dart';
+import '../../services/supabase_data_service.dart';
 import '../utils/logger.dart';
 import '../config/app_config.dart';
 
@@ -189,15 +191,65 @@ class AIGenerationProvider extends ChangeNotifier {
     return promptParts.join(', ');
   }
 
-  /// Save image to user library
-  Future<bool> saveToLibrary(String imageBase64) async {
+  /// Save image to user library with proper Supabase integration
+  Future<bool> saveToLibrary(String imageBase64, {String? userId}) async {
     try {
-      // For now, just add to generation history
-      // You can implement actual library saving later
-      AppLogger.info('Saving image to library', tag: 'AIGenerationProvider');
+      if (userId == null) {
+        AppLogger.error(
+          'User ID required to save to library',
+          tag: 'AIGenerationProvider',
+        );
+        _error = 'User not logged in';
+        notifyListeners();
+        return false;
+      }
+
+      AppLogger.info(
+        'Saving generated image to user library',
+        tag: 'AIGenerationProvider',
+      );
+
+      // 1. Upload image to Supabase Storage
+      final imageUrl = await SupabaseStorageService.uploadImage(
+        imageBase64: imageBase64,
+        userId: userId,
+        assetType: _selectedAssetType,
+      );
+
+      if (imageUrl == null) {
+        _error = 'Failed to upload image to storage';
+        notifyListeners();
+        return false;
+      }
+
+      // 2. Save asset metadata to database
+      final assetId = await SupabaseDataService.saveAsset(
+        userId: userId,
+        prompt: _currentPrompt,
+        imagePath: imageUrl, // Using imagePath parameter name from new schema
+        assetType: _selectedAssetType, // Optional parameter
+        style: _selectedStyle, // Optional parameter
+      );
+
+      if (assetId == null) {
+        _error = 'Failed to save asset to database';
+        notifyListeners();
+        return false;
+      }
+
+      AppLogger.success(
+        'Image saved to library successfully: $assetId',
+        tag: 'AIGenerationProvider',
+      );
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       _error = 'Failed to save image: $e';
+      AppLogger.error(
+        'Failed to save image to library: $e',
+        tag: 'AIGenerationProvider',
+        error: e,
+        stackTrace: stackTrace,
+      );
       notifyListeners();
       return false;
     }

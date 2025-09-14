@@ -185,13 +185,10 @@ class AuthService {
     try {
       final profile = {
         'id': user.id,
-        'email': user.email,
         'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-        'gemstone_count': 10, // Starting gemstones
-        'total_generated': 0,
-        'premium_tier': 'free',
-        // Add other default profile fields
+        'gemstones': 10, // Starting gemstones - matches your schema
+        'pro_status': false, // Free tier by default - matches your schema
+        // Remove last_free_gemstones_grant - let it be null initially
       };
 
       await _supabase.from('users').insert(profile);

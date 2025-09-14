@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/logger.dart';
 import '../models/asset_model.dart';
+import '../../services/supabase_data_service.dart';
 
 /// Gallery Provider
 ///
@@ -25,8 +27,17 @@ class GalleryProvider extends ChangeNotifier {
   String get selectedFilter => _selectedFilter;
   String get selectedSort => _selectedSort;
 
-  /// Load user's personal assets
-  Future<void> loadUserAssets() async {
+  // Available filters and sorts
+  List<String> get availableFilters => [
+    'All',
+    'Favorites',
+    'Public',
+    'Private',
+  ];
+  List<String> get availableSorts => ['Recent', 'Oldest', 'Favorites'];
+
+  /// Load user assets from database
+  Future<void> loadUserAssets(String userId) async {
     try {
       _isLoading = true;
       _error = null;
@@ -34,23 +45,26 @@ class GalleryProvider extends ChangeNotifier {
 
       AppLogger.info('Loading user assets', tag: _logTag);
 
-      // Simulate loading user assets
-      await Future.delayed(const Duration(seconds: 1));
+      final assets = await SupabaseDataService.loadUserAssets(userId);
+      _userAssets = assets;
 
-      // Mock data for now - replace with actual data loading
-      _userAssets = _generateMockAssets(isUserAsset: true);
-
-      AppLogger.success('User assets loaded successfully', tag: _logTag);
-    } catch (e) {
-      _error = e.toString();
+      AppLogger.success('Loaded ${assets.length} user assets', tag: _logTag);
+    } catch (e, stackTrace) {
+      _error = 'Failed to load user assets: $e';
       AppLogger.error('Failed to load user assets: $e', tag: _logTag);
+      AppLogger.debug('Stack trace: $stackTrace', tag: _logTag);
+
+      // Fallback to mock data in debug mode
+      if (kDebugMode) {
+        _userAssets = _generateMockAssets(isUserAsset: true);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Load community gallery assets
+  /// Load community assets from database
   Future<void> loadCommunityAssets() async {
     try {
       _isLoading = true;
@@ -59,52 +73,96 @@ class GalleryProvider extends ChangeNotifier {
 
       AppLogger.info('Loading community assets', tag: _logTag);
 
-      // Simulate loading community assets
-      await Future.delayed(const Duration(seconds: 1));
+      final assets = await SupabaseDataService.loadCommunityAssets();
+      _communityAssets = assets;
 
-      // Mock data for now - replace with actual data loading
-      _communityAssets = _generateMockAssets(isUserAsset: false);
-
-      AppLogger.success('Community assets loaded successfully', tag: _logTag);
-    } catch (e) {
-      _error = e.toString();
+      AppLogger.success(
+        'Loaded ${assets.length} community assets',
+        tag: _logTag,
+      );
+    } catch (e, stackTrace) {
+      _error = 'Failed to load community assets: $e';
       AppLogger.error('Failed to load community assets: $e', tag: _logTag);
+      AppLogger.debug('Stack trace: $stackTrace', tag: _logTag);
+
+      // Fallback to mock data in debug mode
+      if (kDebugMode) {
+        _communityAssets = _generateMockAssets(isUserAsset: false);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Update search query
-  void setSearchQuery(String query) {
-    _searchQuery = query;
-    notifyListeners();
-  }
-
-  /// Update filter
-  void setFilter(String filter) {
-    _selectedFilter = filter;
-    notifyListeners();
-  }
-
-  /// Update sort
-  void setSort(String sort) {
-    _selectedSort = sort;
-    notifyListeners();
-  }
-
-  /// Toggle favorite status
+  /// Toggle asset favorite status
   Future<void> toggleFavorite(AssetModel asset) async {
     try {
       AppLogger.info('Toggling favorite for asset: ${asset.id}', tag: _logTag);
 
-      // Update local state
-      asset.isFavorite = !asset.isFavorite;
-      notifyListeners();
+      final success = await SupabaseDataService.toggleAssetFavorite(
+        asset.id,
+        !asset.isFavorite,
+      );
 
-      // Here you would sync with backend
-    } catch (e) {
+      if (success) {
+        // Update local state
+        _updateAssetInList(
+          _userAssets,
+          asset.copyWith(isFavorite: !asset.isFavorite),
+        );
+        _updateAssetInList(
+          _communityAssets,
+          asset.copyWith(isFavorite: !asset.isFavorite),
+        );
+        notifyListeners();
+
+        AppLogger.success('Asset favorite status updated', tag: _logTag);
+      } else {
+        _error = 'Failed to update favorite status';
+        notifyListeners();
+      }
+    } catch (e, stackTrace) {
+      _error = 'Failed to toggle favorite: $e';
       AppLogger.error('Failed to toggle favorite: $e', tag: _logTag);
+      notifyListeners();
+    }
+  }
+
+  /// Toggle asset public status
+  Future<void> togglePublic(AssetModel asset) async {
+    try {
+      AppLogger.info(
+        'Toggling public status for asset: ${asset.id}',
+        tag: _logTag,
+      );
+
+      final success = await SupabaseDataService.toggleAssetPublic(
+        asset.id,
+        !asset.isPublic,
+      );
+
+      if (success) {
+        // Update local state
+        _updateAssetInList(
+          _userAssets,
+          asset.copyWith(isPublic: !asset.isPublic),
+        );
+        _updateAssetInList(
+          _communityAssets,
+          asset.copyWith(isPublic: !asset.isPublic),
+        );
+        notifyListeners();
+
+        AppLogger.success('Asset public status updated', tag: _logTag);
+      } else {
+        _error = 'Failed to update public status';
+        notifyListeners();
+      }
+    } catch (e, stackTrace) {
+      _error = 'Failed to toggle public status: $e';
+      AppLogger.error('Failed to toggle public status: $e', tag: _logTag);
+      notifyListeners();
     }
   }
 
@@ -113,37 +171,74 @@ class GalleryProvider extends ChangeNotifier {
     try {
       AppLogger.info('Deleting asset: ${asset.id}', tag: _logTag);
 
-      // Remove from local list
-      _userAssets.removeWhere((a) => a.id == asset.id);
-      notifyListeners();
+      final success = await SupabaseDataService.deleteAsset(asset.id);
 
-      // Here you would delete from backend
-    } catch (e) {
+      if (success) {
+        // Remove from local state
+        _userAssets.removeWhere((a) => a.id == asset.id);
+        _communityAssets.removeWhere((a) => a.id == asset.id);
+        notifyListeners();
+
+        AppLogger.success('Asset deleted successfully', tag: _logTag);
+      } else {
+        _error = 'Failed to delete asset';
+        notifyListeners();
+      }
+    } catch (e, stackTrace) {
+      _error = 'Failed to delete asset: $e';
       AppLogger.error('Failed to delete asset: $e', tag: _logTag);
+      notifyListeners();
     }
+  }
+
+  /// Update search query
+  void updateSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
+  /// Update filter
+  void updateFilter(String filter) {
+    _selectedFilter = filter;
+    notifyListeners();
+  }
+
+  /// Update sort
+  void updateSort(String sort) {
+    _selectedSort = sort;
+    notifyListeners();
+  }
+
+  /// Clear error
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 
   /// Filter assets based on search and filter criteria
   List<AssetModel> _filteredAssets(List<AssetModel> assets) {
     var filtered = assets.where((asset) {
-      // Search filter
+      // Search filter - search in prompt since that's what we have
       if (_searchQuery.isNotEmpty &&
-          !asset.title.toLowerCase().contains(_searchQuery.toLowerCase()) &&
-          !asset.tags.any(
-            (tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )) {
+          !asset.prompt.toLowerCase().contains(_searchQuery.toLowerCase())) {
         return false;
       }
 
-      // Category filter
-      if (_selectedFilter != 'All' && asset.category != _selectedFilter) {
-        return false;
+      // Filter by type
+      switch (_selectedFilter) {
+        case 'Favorites':
+          return asset.isFavorite;
+        case 'Public':
+          return asset.isPublic;
+        case 'Private':
+          return !asset.isPublic;
+        case 'All':
+        default:
+          return true;
       }
-
-      return true;
     }).toList();
 
-    // Sort
+    // Sort assets
     switch (_selectedSort) {
       case 'Recent':
         filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -151,18 +246,25 @@ class GalleryProvider extends ChangeNotifier {
       case 'Oldest':
         filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         break;
-      case 'Popular':
-        filtered.sort((a, b) => b.likes.compareTo(a.likes));
-        break;
-      case 'Name A-Z':
-        filtered.sort((a, b) => a.title.compareTo(b.title));
-        break;
-      case 'Name Z-A':
-        filtered.sort((a, b) => b.title.compareTo(a.title));
+      case 'Favorites':
+        // Sort favorites first, then by creation date
+        filtered.sort((a, b) {
+          if (a.isFavorite && !b.isFavorite) return -1;
+          if (!a.isFavorite && b.isFavorite) return 1;
+          return b.createdAt.compareTo(a.createdAt);
+        });
         break;
     }
 
     return filtered;
+  }
+
+  /// Update asset in list helper
+  void _updateAssetInList(List<AssetModel> list, AssetModel updatedAsset) {
+    final index = list.indexWhere((asset) => asset.id == updatedAsset.id);
+    if (index != -1) {
+      list[index] = updatedAsset;
+    }
   }
 
   /// Generate mock assets for testing
@@ -171,45 +273,14 @@ class GalleryProvider extends ChangeNotifier {
       20,
       (index) => AssetModel(
         id: '${isUserAsset ? 'user' : 'community'}_asset_$index',
-        title: '${isUserAsset ? 'My' : 'Community'} Asset ${index + 1}',
-        description: 'A beautiful AI-generated asset',
-        imageUrl: 'https://picsum.photos/300/300?random=$index',
-        category: [
-          'Character',
-          'Environment',
-          'UI Element',
-          'Icon',
-          'Texture',
-        ][index % 5],
-        tags: ['ai-generated', 'fantasy', 'digital-art'],
-        createdAt: DateTime.now().subtract(Duration(days: index)),
-        likes: (index * 5) + 10,
+        userId: isUserAsset ? 'current_user' : 'user_$index',
+        prompt:
+            'A beautiful ${['fantasy', 'futuristic', 'magical', 'mystical'][index % 4]} scene with detailed AI-generated artwork',
+        imagePath: 'https://picsum.photos/300/300?random=$index',
         isPublic: !isUserAsset ? true : (index % 3 == 0),
         isFavorite: index % 4 == 0,
-        authorId: isUserAsset ? 'current_user' : 'user_$index',
-        authorName: isUserAsset ? 'You' : 'Artist ${index + 1}',
-        cloudUrl: 'https://picsum.photos/300/300?random=$index',
-        prompt:
-            'A beautiful ${['fantasy', 'futuristic', 'magical', 'mystical'][index % 4]} scene',
-        assetType: [
-          'Character',
-          'Environment',
-          'UI Element',
-          'Icon',
-          'Texture',
-        ][index % 5],
+        createdAt: DateTime.now().subtract(Duration(days: index)),
       ),
     );
-  }
-
-  /// Clear all data
-  void clearData() {
-    _userAssets.clear();
-    _communityAssets.clear();
-    _searchQuery = '';
-    _selectedFilter = 'All';
-    _selectedSort = 'Recent';
-    _error = null;
-    notifyListeners();
   }
 }

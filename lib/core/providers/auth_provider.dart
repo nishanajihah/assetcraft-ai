@@ -28,10 +28,9 @@ class AuthProvider extends ChangeNotifier {
   // User info getters
   String? get userEmail => _currentUser?.email;
   String? get userId => _currentUser?.id;
-  String? get displayName =>
-      _userProfile?['display_name'] ?? _userProfile?['email'];
-  int get gemstoneCount => _userProfile?['gemstone_count'] ?? 0;
-  String get premiumTier => _userProfile?['premium_tier'] ?? 'free';
+  String? get displayName => _currentUser?.email; // Use email as display name
+  int get gemstoneCount => _userProfile?['gemstones'] ?? 0; // Updated field name
+  bool get proStatus => _userProfile?['pro_status'] ?? false; // Updated field name
 
   AuthProvider() {
     _initialize();

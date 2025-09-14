@@ -4,6 +4,7 @@ import '../core/providers/store_provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../ui/components/app_components.dart';
+import '../ui/widgets/buttons/rewarded_ad_button.dart';
 
 /// Store Screen
 ///
@@ -559,78 +560,8 @@ class _StoreScreenState extends State<StoreScreen>
           ),
           SizedBox(height: AppDimensions.spacingLarge),
 
-          // Watch ad for gems
-          NeomorphicContainer(
-            padding: EdgeInsets.all(AppDimensions.paddingLarge),
-            child: Column(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.accentTeal, AppColors.accentBlue],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: const Icon(
-                    Icons.play_circle_fill,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-
-                SizedBox(height: AppDimensions.spacingMedium),
-
-                Text(
-                  'Watch Ad for Gems',
-                  style: AppTextStyles.headingSmall.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                SizedBox(height: AppDimensions.spacingSmall),
-
-                Text(
-                  'Watch a short video to earn 2 free gemstones',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                SizedBox(height: AppDimensions.spacingMedium),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: GoldButton(
-                    text: provider.canWatchAd
-                        ? 'Watch Ad (+2 Gems)'
-                        : 'Come back later',
-                    onPressed: provider.canWatchAd && !provider.isWatchingAd
-                        ? () => _watchRewardedAd(provider)
-                        : null,
-                    variant: ButtonVariant.primary,
-                    isLoading: provider.isWatchingAd,
-                  ),
-                ),
-
-                if (!provider.canWatchAd)
-                  Padding(
-                    padding: EdgeInsets.only(top: AppDimensions.spacingSmall),
-                    child: Text(
-                      'Next ad available in ${provider.nextAdCountdown}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          // Watch ad for gems - New AdMob Integration
+          const RewardedAdButton(customText: 'Watch Ad (+5 Gems)'),
 
           SizedBox(height: AppDimensions.spacingLarge),
 
@@ -802,29 +733,6 @@ class _StoreScreenState extends State<StoreScreen>
       }
     } catch (e) {
       _showPurchaseErrorDialog(e.toString());
-    }
-  }
-
-  Future<void> _watchRewardedAd(StoreProvider provider) async {
-    try {
-      final success = await provider.watchRewardedAd();
-      if (mounted && success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 You earned 2 gemstones!'),
-            backgroundColor: AppColors.accentTeal,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load ad: $e'),
-            backgroundColor: AppColors.accentDeepOrange,
-          ),
-        );
-      }
     }
   }
 

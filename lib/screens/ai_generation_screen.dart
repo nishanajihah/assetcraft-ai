@@ -578,9 +578,15 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
             )
           : _currentStep == 3 && !aiProvider.isGenerating
           ? GoldButton(
-              text: '🎨 Generate',
-              onPressed: () => _generateImage(aiProvider, userProvider),
-              variant: ButtonVariant.primary,
+              text: aiProvider.hasVertexAiCredentials
+                  ? '🎨 Generate'
+                  : '⚠️ AI Not Configured',
+              onPressed: aiProvider.hasVertexAiCredentials
+                  ? () => _generateImage(aiProvider, userProvider)
+                  : null,
+              variant: aiProvider.hasVertexAiCredentials
+                  ? ButtonVariant.primary
+                  : ButtonVariant.secondary,
             )
           : const SizedBox.shrink(),
     );
@@ -649,6 +655,12 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     AIGenerationProvider aiProvider,
     UserProvider userProvider,
   ) async {
+    // Check if AI service is properly configured
+    if (!aiProvider.hasVertexAiCredentials) {
+      _showConfigurationErrorDialog();
+      return;
+    }
+
     // Check gemstone count
     if (userProvider.gemstoneCount <= 0) {
       _showInsufficientGemstonesDialog();
@@ -660,13 +672,44 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     final enhancedPrompt = _buildEnhancedPrompt(colorName);
 
     try {
-      await aiProvider.generateImage(customPrompt: enhancedPrompt);
+      // Set generation parameters
+      aiProvider.setAssetType(_selectedAssetType ?? 'character');
+      aiProvider.setStyle(_selectedStyle ?? 'photographic');
+      aiProvider.setColor(_selectedColor?.toString() ?? '');
 
-      if (aiProvider.generatedImage != null) {
-        // Deduct gemstone
+      // Generate image
+      final success = await aiProvider.generateImage(
+        customPrompt: enhancedPrompt,
+      );
+
+      if (success && aiProvider.generatedImage != null) {
+        // Deduct gemstone only on successful generation
         userProvider.spendGemstones(1);
+
+        AppLogger.success(
+          'Image generated successfully, gemstone deducted',
+          tag: 'AIGenerationScreen',
+        );
+      } else {
+        // Show error if generation failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Generation failed: ${aiProvider.error ?? 'Unknown error'}',
+              ),
+              backgroundColor: AppColors.accentDeepOrange,
+            ),
+          );
+        }
       }
     } catch (e) {
+      AppLogger.error(
+        'Generation error: $e',
+        tag: 'AIGenerationScreen',
+        error: e,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -755,15 +798,86 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     );
   }
 
-  void _saveToLibrary() {
-    final provider = Provider.of<AIGenerationProvider>(context, listen: false);
-    if (provider.generatedImage != null) {
-      provider.saveToLibrary(provider.generatedImage!);
+  void _showConfigurationErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('AI Service Not Configured'),
+        content: const Text(
+          'The AI image generation service is not properly configured. Please contact support or try again later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
+  void _saveToLibrary() async {
+    final aiProvider = Provider.of<AIGenerationProvider>(
+      context,
+      listen: false,
+    );
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    if (aiProvider.generatedImage != null && userProvider.userId != null) {
+      // Show loading state
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Saved to your library!'),
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Saving to library...'),
+            ],
+          ),
           backgroundColor: AppColors.primaryGold,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Save to library with user ID
+      final success = await aiProvider.saveToLibrary(
+        aiProvider.generatedImage!,
+        userId: userProvider.userId!,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Saved to your library!'),
+              backgroundColor: AppColors.accentTeal,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ Failed to save: ${aiProvider.error ?? 'Unknown error'}',
+              ),
+              backgroundColor: AppColors.accentDeepOrange,
+            ),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ No image to save or user not logged in'),
+          backgroundColor: AppColors.accentDeepOrange,
         ),
       );
     }
