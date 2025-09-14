@@ -1,11 +1,11 @@
 {
-    "name": "assetcraft_ai_v2",
-    "short_name": "assetcraft_ai_v2",
+    "name": "AssetCraft AI",
+    "short_name": "AssetCraft AI",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "AI-powered image generation app for creating stunning digital assets.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

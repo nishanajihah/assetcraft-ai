@@ -99,7 +99,6 @@ app.*.map.json
 supabase/.temp/
 supabase/.branches/
 
-# 📝 Keep important documentation, exclude temporary markdown files
-temp_*.md
-draft_*.md
-notes_*.md
+# 📝 Markdown files (exclude all except README.md)
+*.md
+!README.md
