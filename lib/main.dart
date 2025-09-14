@@ -25,6 +25,10 @@ import 'screens/login_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Show startup banner
+  AppLogger.startupBanner();
+  AppLogger.separator(title: 'INITIALIZATION');
+
   // Initialize all app services using the centralized service
   final initSuccess = await AppInitializationService.initialize();
 
@@ -110,7 +114,29 @@ class _AssetCraftHomePageState extends State<AssetCraftHomePage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    AppLogger.debug('App lifecycle state changed: $state', tag: 'Main');
+    AppLogger.lifecycle('App lifecycle state changed to: $state', tag: 'Main');
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        AppLogger.info('App resumed - user returned to app', tag: 'Main');
+        break;
+      case AppLifecycleState.paused:
+        AppLogger.info('App paused - user left app', tag: 'Main');
+        break;
+      case AppLifecycleState.inactive:
+        AppLogger.debug('App inactive - transitioning state', tag: 'Main');
+        break;
+      case AppLifecycleState.detached:
+        AppLogger.warning(
+          'App detached - system is shutting down app',
+          tag: 'Main',
+        );
+        AppLogger.shutdown();
+        break;
+      case AppLifecycleState.hidden:
+        AppLogger.debug('App hidden - no longer visible', tag: 'Main');
+        break;
+    }
   }
 
   void _checkInitialization() {

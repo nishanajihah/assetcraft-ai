@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/ad_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../components/app_components.dart';
 
 /// Rewarded Ad Button Widget
 ///

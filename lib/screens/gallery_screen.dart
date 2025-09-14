@@ -52,8 +52,13 @@ class _GalleryScreenState extends State<GalleryScreen>
     // Load data when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<GalleryProvider>(context, listen: false);
-      provider.loadUserAssets();
-      provider.loadCommunityAssets();
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      // Get current user ID from auth
+      if (userProvider.userId != null) {
+        provider.loadUserAssets(userProvider.userId!);
+        provider.loadCommunityAssets();
+      }
     });
   }
 
@@ -249,7 +254,12 @@ class _GalleryScreenState extends State<GalleryScreen>
 
   Widget _buildMyLibrary(GalleryProvider provider) {
     return RefreshIndicator(
-      onRefresh: () => provider.loadUserAssets(),
+      onRefresh: () async {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        if (userProvider.userId != null) {
+          await provider.loadUserAssets(userProvider.userId!);
+        }
+      },
       color: AppColors.primaryGold,
       child: _buildAssetGrid(
         provider.userAssets,
@@ -340,38 +350,45 @@ class _GalleryScreenState extends State<GalleryScreen>
                   child: Container(
                     width: double.infinity,
                     color: AppColors.surfaceDim,
-                    child: asset.localPath != null
-                        ? Image.asset(
-                            asset.localPath!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildImagePlaceholder();
-                            },
-                          )
-                        : asset.cloudUrl != null
-                        ? Image.network(
-                            asset.cloudUrl!,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                  valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                        AppColors.primaryGold,
-                                      ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildImagePlaceholder();
-                            },
-                          )
+                    child: asset.imagePath.isNotEmpty
+                        ? (asset.imagePath.startsWith('http')
+                              ? Image.network(
+                                  asset.imagePath,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        }
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                            valueColor:
+                                                const AlwaysStoppedAnimation<
+                                                  Color
+                                                >(AppColors.primaryGold),
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _buildImagePlaceholder();
+                                  },
+                                )
+                              : Image.asset(
+                                  asset.imagePath,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _buildImagePlaceholder();
+                                  },
+                                ))
                         : _buildImagePlaceholder(),
                   ),
                 ),
@@ -381,7 +398,7 @@ class _GalleryScreenState extends State<GalleryScreen>
 
               // Asset info
               Text(
-                asset.prompt ?? 'AI Generated Asset',
+                asset.prompt.isNotEmpty ? asset.prompt : 'AI Generated Asset',
                 style: AppTextStyles.bodySmall.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -403,7 +420,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      (asset.assetType ?? asset.category).toUpperCase(),
+                      'AI ASSET',
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.primaryGold,
                         fontWeight: FontWeight.w600,
@@ -436,10 +453,10 @@ class _GalleryScreenState extends State<GalleryScreen>
                 width: 60,
                 height: 60,
                 color: AppColors.surfaceDim,
-                child: asset.localPath != null
-                    ? Image.asset(asset.localPath!, fit: BoxFit.cover)
-                    : asset.cloudUrl != null
-                    ? Image.network(asset.cloudUrl!, fit: BoxFit.cover)
+                child: asset.imagePath.isNotEmpty
+                    ? (asset.imagePath.startsWith('http')
+                          ? Image.network(asset.imagePath, fit: BoxFit.cover)
+                          : Image.asset(asset.imagePath, fit: BoxFit.cover))
                     : _buildImagePlaceholder(),
               ),
             ),
@@ -452,7 +469,9 @@ class _GalleryScreenState extends State<GalleryScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    asset.prompt ?? 'AI Generated Asset',
+                    asset.prompt.isNotEmpty
+                        ? asset.prompt
+                        : 'AI Generated Asset',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -474,7 +493,7 @@ class _GalleryScreenState extends State<GalleryScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          (asset.assetType ?? asset.category).toUpperCase(),
+                          'AI ASSET',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.primaryGold,
                             fontWeight: FontWeight.w600,
@@ -599,13 +618,13 @@ class _GalleryScreenState extends State<GalleryScreen>
 
   void _onSearchChanged(String query) {
     final provider = Provider.of<GalleryProvider>(context, listen: false);
-    provider.setSearchQuery(query);
+    provider.updateSearchQuery(query);
   }
 
   void _applyFilters() {
     final provider = Provider.of<GalleryProvider>(context, listen: false);
-    provider.setFilter(_selectedFilter);
-    provider.setSort(_selectedSort);
+    provider.updateFilter(_selectedFilter);
+    provider.updateSort(_selectedSort);
   }
 
   void _openAssetDetail(AssetModel asset) {
@@ -807,13 +826,16 @@ class AssetDetailScreen extends StatelessWidget {
                       child: Container(
                         width: double.infinity,
                         color: AppColors.surfaceDim,
-                        child: asset.localPath != null
-                            ? Image.asset(asset.localPath!, fit: BoxFit.contain)
-                            : asset.cloudUrl != null
-                            ? Image.network(
-                                asset.cloudUrl!,
-                                fit: BoxFit.contain,
-                              )
+                        child: asset.imagePath.isNotEmpty
+                            ? (asset.imagePath.startsWith('http')
+                                  ? Image.network(
+                                      asset.imagePath,
+                                      fit: BoxFit.contain,
+                                    )
+                                  : Image.asset(
+                                      asset.imagePath,
+                                      fit: BoxFit.contain,
+                                    ))
                             : Center(
                                 child: Icon(
                                   Icons.image,
@@ -847,7 +869,9 @@ class AssetDetailScreen extends StatelessWidget {
                     SizedBox(height: AppDimensions.spacingSmall),
 
                     Text(
-                      asset.prompt ?? 'AI Generated Asset',
+                      asset.prompt.isNotEmpty
+                          ? asset.prompt
+                          : 'AI Generated Asset',
                       style: AppTextStyles.bodyMedium,
                     ),
 
@@ -865,7 +889,7 @@ class AssetDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            (asset.assetType ?? asset.category).toUpperCase(),
+                            'AI ASSET',
                             style: AppTextStyles.caption.copyWith(
                               color: AppColors.primaryGold,
                               fontWeight: FontWeight.w600,

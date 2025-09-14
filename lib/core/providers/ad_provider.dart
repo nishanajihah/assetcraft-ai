@@ -12,7 +12,6 @@ class AdProvider extends ChangeNotifier {
   static const String _logTag = 'AdProvider';
 
   final AdService _adService = AdService();
-  UserProvider? _userProvider;
 
   // State variables
   bool _isInitialized = false;
@@ -32,7 +31,6 @@ class AdProvider extends ChangeNotifier {
     try {
       AppLogger.info('Initializing AdProvider', tag: _logTag);
 
-      _userProvider = userProvider;
       _adService.initialize(userProvider);
 
       // Initialize Google Mobile Ads

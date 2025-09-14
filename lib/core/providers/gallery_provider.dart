@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/logger.dart';
 import '../models/asset_model.dart';
@@ -122,7 +121,7 @@ class GalleryProvider extends ChangeNotifier {
         _error = 'Failed to update favorite status';
         notifyListeners();
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       _error = 'Failed to toggle favorite: $e';
       AppLogger.error('Failed to toggle favorite: $e', tag: _logTag);
       notifyListeners();
@@ -159,7 +158,7 @@ class GalleryProvider extends ChangeNotifier {
         _error = 'Failed to update public status';
         notifyListeners();
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       _error = 'Failed to toggle public status: $e';
       AppLogger.error('Failed to toggle public status: $e', tag: _logTag);
       notifyListeners();
@@ -184,7 +183,7 @@ class GalleryProvider extends ChangeNotifier {
         _error = 'Failed to delete asset';
         notifyListeners();
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       _error = 'Failed to delete asset: $e';
       AppLogger.error('Failed to delete asset: $e', tag: _logTag);
       notifyListeners();

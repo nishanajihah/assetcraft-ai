@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/providers/ai_generation_provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
+import '../core/utils/logger.dart';
 import '../ui/components/app_components.dart';
 
 /// AI Generation Screen
@@ -655,14 +656,34 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     AIGenerationProvider aiProvider,
     UserProvider userProvider,
   ) async {
+    AppLogger.userAction(
+      'Starting AI image generation',
+      tag: 'AIGenerationScreen',
+      data: {
+        'assetType': _selectedAssetType,
+        'style': _selectedStyle,
+        'hasColor': _selectedColor != null,
+        'gemstones': userProvider.gemstoneCount,
+      },
+    );
+
     // Check if AI service is properly configured
     if (!aiProvider.hasVertexAiCredentials) {
+      AppLogger.warning(
+        'Vertex AI credentials not configured',
+        tag: 'AIGenerationScreen',
+      );
       _showConfigurationErrorDialog();
       return;
     }
 
     // Check gemstone count
     if (userProvider.gemstoneCount <= 0) {
+      AppLogger.warning(
+        'Insufficient gemstones for generation',
+        tag: 'AIGenerationScreen',
+        data: {'gemstones': userProvider.gemstoneCount},
+      );
       _showInsufficientGemstonesDialog();
       return;
     }
@@ -671,26 +692,57 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     final colorName = _getColorName(_selectedColor);
     final enhancedPrompt = _buildEnhancedPrompt(colorName);
 
+    AppLogger.info(
+      'Built enhanced prompt for generation',
+      tag: 'AIGenerationScreen',
+      data: {'promptLength': enhancedPrompt.length},
+    );
+
     try {
+      final stopwatch = Stopwatch()..start();
+
       // Set generation parameters
       aiProvider.setAssetType(_selectedAssetType ?? 'character');
       aiProvider.setStyle(_selectedStyle ?? 'photographic');
       aiProvider.setColor(_selectedColor?.toString() ?? '');
+
+      AppLogger.network(
+        'Sending generation request to Vertex AI',
+        tag: 'AIGenerationScreen',
+      );
 
       // Generate image
       final success = await aiProvider.generateImage(
         customPrompt: enhancedPrompt,
       );
 
+      stopwatch.stop();
+
       if (success && aiProvider.generatedImage != null) {
         // Deduct gemstone only on successful generation
         userProvider.spendGemstones(1);
 
+        AppLogger.performance(
+          'Image generation',
+          stopwatch.elapsed,
+          tag: 'AIGenerationScreen',
+        );
+
         AppLogger.success(
           'Image generated successfully, gemstone deducted',
           tag: 'AIGenerationScreen',
+          data: {
+            'duration': '${stopwatch.elapsed.inMilliseconds}ms',
+            'remainingGemstones': userProvider.gemstoneCount - 1,
+          },
         );
       } else {
+        AppLogger.error(
+          'Image generation failed',
+          tag: 'AIGenerationScreen',
+          error: aiProvider.error,
+        );
+
         // Show error if generation failed
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -705,7 +757,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
       }
     } catch (e) {
       AppLogger.error(
-        'Generation error: $e',
+        'Unexpected error during image generation',
         tag: 'AIGenerationScreen',
         error: e,
       );

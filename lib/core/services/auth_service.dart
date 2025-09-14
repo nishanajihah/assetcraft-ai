@@ -29,7 +29,11 @@ class AuthService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      AppLogger.info('Attempting to sign up user: $email', tag: _logTag);
+      AppLogger.userAction(
+        'User signup attempt',
+        tag: _logTag,
+        data: {'email': email},
+      );
 
       final response = await _supabase.auth.signUp(
         email: email,
@@ -39,12 +43,22 @@ class AuthService {
 
       if (response.user != null) {
         AppLogger.success(
-          'User signed up successfully: ${response.user!.email}',
+          'User signed up successfully',
           tag: _logTag,
+          data: {
+            'userId': response.user!.id,
+            'email': response.user!.email,
+            'hasMetadata': metadata != null,
+          },
         );
 
         // Create user profile in database
         await _createUserProfile(response.user!);
+      } else {
+        AppLogger.warning(
+          'Signup response received but no user object',
+          tag: _logTag,
+        );
       }
 
       return response;
@@ -60,7 +74,11 @@ class AuthService {
     required String password,
   }) async {
     try {
-      AppLogger.info('Attempting to sign in user: $email', tag: _logTag);
+      AppLogger.userAction(
+        'User signin attempt',
+        tag: _logTag,
+        data: {'email': email},
+      );
 
       final response = await _supabase.auth.signInWithPassword(
         email: email,
@@ -69,8 +87,13 @@ class AuthService {
 
       if (response.user != null) {
         AppLogger.success(
-          'User signed in successfully: ${response.user!.email}',
+          'User signed in successfully',
           tag: _logTag,
+          data: {
+            'userId': response.user!.id,
+            'email': response.user!.email,
+            'lastSignIn': response.user!.lastSignInAt,
+          },
         );
 
         // Ensure user profile exists
