@@ -5,6 +5,7 @@ import '../core/providers/ai_generation_provider.dart';
 import '../core/providers/user_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/logger.dart';
+import '../services/cost_monitoring_service.dart';
 import '../ui/components/app_components.dart';
 
 /// AI Generation Screen
@@ -648,6 +649,14 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
   Future<void> _getAISuggestions() async {
     if (_selectedAssetType == null) return;
 
+    // Show cost warning if user is approaching limit
+    final shouldWarn = await CostMonitoringService.shouldWarnUser();
+    if (shouldWarn) {
+      final currentCost = await CostMonitoringService.getTotalDailyCost();
+      final proceed = await _showCostWarningDialog(currentCost);
+      if (!proceed) return;
+    }
+
     final provider = Provider.of<AIGenerationProvider>(context, listen: false);
     await provider.generateSuggestions();
   }
@@ -969,5 +978,72 @@ class _AIGenerationScreenState extends State<AIGenerationScreen>
     final provider = Provider.of<AIGenerationProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     _generateImage(provider, userProvider);
+  }
+
+  /// Show cost warning dialog when approaching spending limit
+  Future<bool> _showCostWarningDialog(double currentCost) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              icon: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 48,
+              ),
+              title: const Text('Cost Warning'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'You have spent RM${currentCost.toStringAsFixed(2)} today on AI services.',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: const Column(
+                      children: [
+                        Text(
+                          '⚠️ You are approaching your daily limit of RM100',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Each AI request costs approximately RM0.01-0.02',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Continue Anyway'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 }

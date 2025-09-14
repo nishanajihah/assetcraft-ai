@@ -3,6 +3,7 @@ import '../../services/image_generation_service.dart';
 import '../../services/gemini_service.dart';
 import '../../services/supabase_storage_service.dart';
 import '../../services/supabase_data_service.dart';
+import '../../services/cost_monitoring_service.dart';
 import '../utils/logger.dart';
 import '../config/app_config.dart';
 
@@ -26,6 +27,12 @@ class AIGenerationProvider extends ChangeNotifier {
 
   // Suggestions
   List<String> _suggestions = [];
+
+  // SAFETY: Prevent retry loops and excessive costs
+  int _consecutiveFailures = 0;
+  DateTime? _lastFailureTime;
+  static const int _maxConsecutiveFailures = 3;
+  static const int _failureCooldownMinutes = 5;
 
   // Additional properties for UI compatibility
   String? get generatedImage =>
@@ -86,6 +93,28 @@ class AIGenerationProvider extends ChangeNotifier {
   /// Generate image with current parameters
   Future<bool> generateImage({String? customPrompt}) async {
     try {
+      // SAFETY CHECK 1: Check for consecutive failures and cooldown
+      if (_consecutiveFailures >= _maxConsecutiveFailures &&
+          _lastFailureTime != null) {
+        final timeSinceLastFailure = DateTime.now().difference(
+          _lastFailureTime!,
+        );
+        if (timeSinceLastFailure.inMinutes < _failureCooldownMinutes) {
+          _error =
+              'Too many consecutive failures. Please wait ${_failureCooldownMinutes - timeSinceLastFailure.inMinutes} more minutes before trying again.';
+          AppLogger.warning(
+            'Generation blocked due to consecutive failures',
+            tag: 'AIGenerationProvider',
+          );
+          notifyListeners();
+          return false;
+        } else {
+          // Reset after cooldown
+          _consecutiveFailures = 0;
+          _lastFailureTime = null;
+        }
+      }
+
       _isGenerating = true;
       _error = null;
       _generatedImages.clear();
@@ -95,9 +124,36 @@ class AIGenerationProvider extends ChangeNotifier {
       String finalPrompt = customPrompt ?? _buildEnhancedPrompt();
       _currentPrompt = finalPrompt;
 
+      // SAFETY CHECK 2: Validate prompt
+      if (finalPrompt.trim().isEmpty) {
+        _error = 'Please provide a valid prompt for image generation';
+        _isGenerating = false;
+        notifyListeners();
+        return false;
+      }
+
+      // SAFETY CHECK 3: Check cost limits
+      const estimatedCost = 0.10; // Estimate RM0.10 per image generation
+      if (!await CostMonitoringService.canMakeRequest(
+        'vertex_ai_generation',
+        estimatedCostRM: estimatedCost,
+      )) {
+        _error =
+            'Daily cost limit reached. Image generation is temporarily disabled to prevent excessive charges.';
+        _isGenerating = false;
+        notifyListeners();
+        return false;
+      }
+
       // Generate image using Vertex AI through Supabase Edge Function
       final result = await ImageGenerationService.generateImageWithVertexAI(
         prompt: finalPrompt,
+      );
+
+      // Track the cost
+      await CostMonitoringService.trackCost(
+        'vertex_ai_generation',
+        estimatedCost,
       );
 
       if (result != null && result['success'] == true) {
@@ -106,19 +162,26 @@ class AIGenerationProvider extends ChangeNotifier {
           _generatedImages = [result['imageBase64']];
           _error = null;
 
+          // SAFETY: Reset failure count on success
+          _consecutiveFailures = 0;
+          _lastFailureTime = null;
+
           // Save to generation history
           await _saveToHistory(finalPrompt, _generatedImages.first);
           return true;
         }
 
         _error = 'Invalid image data received from service';
+        _recordFailure();
         return false;
       } else {
         _error = result?['error'] ?? 'Generation failed';
+        _recordFailure();
         return false;
       }
     } catch (e) {
       _error = e.toString();
+      _recordFailure();
       AppLogger.error(
         'Image generation failed',
         tag: 'AIGenerationProvider',
@@ -128,6 +191,24 @@ class AIGenerationProvider extends ChangeNotifier {
     } finally {
       _isGenerating = false;
       notifyListeners();
+    }
+  }
+
+  /// Record a failure to prevent retry loops
+  void _recordFailure() {
+    _consecutiveFailures++;
+    _lastFailureTime = DateTime.now();
+
+    AppLogger.warning(
+      'Generation failure recorded. Count: $_consecutiveFailures',
+      tag: 'AIGenerationProvider',
+    );
+
+    if (_consecutiveFailures >= _maxConsecutiveFailures) {
+      AppLogger.error(
+        'Maximum consecutive failures reached. Entering cooldown period.',
+        tag: 'AIGenerationProvider',
+      );
     }
   }
 
@@ -379,6 +460,17 @@ class AIGenerationProvider extends ChangeNotifier {
   /// Generate suggestions based on current parameters using Gemini AI
   Future<void> generateSuggestions() async {
     try {
+      // SAFETY CHECK: Validate inputs before making API call
+      if (_selectedAssetType.trim().isEmpty) {
+        AppLogger.warning(
+          'No asset type selected, using fallback suggestions',
+          tag: 'AIGenerationProvider',
+        );
+        _suggestions = getPromptSuggestions();
+        notifyListeners();
+        return;
+      }
+
       // Use Gemini service to generate AI-powered suggestions
       _suggestions = await GeminiService.generateSuggestions(
         assetType: _selectedAssetType.isNotEmpty
@@ -394,7 +486,7 @@ class AIGenerationProvider extends ChangeNotifier {
         tag: 'AIGenerationProvider',
         error: e,
       );
-      // Fallback to manual suggestions
+      // SAFETY: Always fallback to manual suggestions on error
       _suggestions = getPromptSuggestions();
       notifyListeners();
     }

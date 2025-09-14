@@ -22,13 +22,13 @@ migrate_working_dir/
 
 # 🔐 Environment & Security Files
 .env
-.env.local
-.env.development
-.env.production
+.env.*
 *.pem
 *.key
 *.p12
 *.keystore
+*.jks
+key.properties
 google-services.json
 GoogleService-Info.plist
 
@@ -36,6 +36,8 @@ GoogleService-Info.plist
 **/secrets/
 **/config/secrets/
 api_keys.dart
+credentials.json
+service-account*.json
 
 # 🗄️ Database & Local Storage
 *.db
@@ -44,6 +46,28 @@ api_keys.dart
 *.hive
 /data/
 user_data/
+
+# 🧪 Testing & Development
+test_*.json
+temp_read/
+/test_data/
+*.test
+coverage.json
+
+# 🗄️ Supabase CLI temporary files
+supabase/.temp/
+supabase/.branches/
+supabase/logs/
+
+# 📊 Analytics & Logs
+*.log
+logs/
+crash_reports/
+
+# 🛠️ Development Tools
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -75,6 +99,7 @@ app.*.map.json
 supabase/.temp/
 supabase/.branches/
 
-# 📝 Markdown files (except README.md)
-*.md
-!README.md
+# 📝 Keep important documentation, exclude temporary markdown files
+temp_*.md
+draft_*.md
+notes_*.md

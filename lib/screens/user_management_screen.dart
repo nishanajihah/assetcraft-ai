@@ -306,11 +306,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           Container(
             padding: EdgeInsets.all(AppDimensions.paddingMedium),
             decoration: BoxDecoration(
-              color: provider.isPremium
+              color: provider.isPro
                   ? AppColors.primaryGold.withValues(alpha: 0.1)
                   : AppColors.surfaceDim,
               borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-              border: provider.isPremium
+              border: provider.isPro
                   ? Border.all(color: AppColors.primaryGold, width: 1)
                   : null,
             ),
@@ -320,13 +320,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: provider.isPremium
+                    color: provider.isPro
                         ? AppColors.primaryGold
                         : AppColors.textSecondary,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
-                    provider.isPremium ? Icons.star : Icons.person,
+                    provider.isPro ? Icons.star : Icons.person,
                     color: Colors.white,
                     size: 20,
                   ),
@@ -339,13 +339,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        provider.isPremium ? 'Premium Member' : 'Free Plan',
+                        provider.isPro ? 'Premium Member' : 'Free Plan',
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (provider.isPremium &&
+                      if (provider.isPro &&
                           provider.subscriptionEndDate != null)
                         Text(
                           'Expires on ${_formatDate(provider.subscriptionEndDate!)}',
@@ -357,7 +357,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
 
-                if (!provider.isPremium)
+                if (!provider.isPro)
                   GoldButton(
                     text: 'Upgrade',
                     onPressed: () {

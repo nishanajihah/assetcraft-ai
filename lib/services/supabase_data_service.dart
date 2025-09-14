@@ -209,15 +209,117 @@ class SupabaseDataService {
     }
   }
 
-  /// Get user's gemstones balance from users table
+  // ===== USER MANAGEMENT METHODS (Two-Table Architecture) =====
+
+  /// Get user record from users table by auth_user_id
+  static Future<Map<String, dynamic>?> getUserRecord(String authUserId) async {
+    try {
+      AppLogger.info(
+        'Getting user record for auth user: $authUserId',
+        tag: _logTag,
+      );
+
+      final response = await _supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', authUserId)
+          .maybeSingle();
+
+      if (response != null) {
+        AppLogger.success('User record found', tag: _logTag);
+      } else {
+        AppLogger.warning('User record not found', tag: _logTag);
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get user record: $e',
+        tag: _logTag,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Get complete user data (joins users and user_profiles tables)
+  static Future<Map<String, dynamic>?> getCompleteUserData(
+    String authUserId,
+  ) async {
+    try {
+      AppLogger.info(
+        'Getting complete user data for auth user: $authUserId',
+        tag: _logTag,
+      );
+
+      final response = await _supabase
+          .from('users')
+          .select('''
+            *,
+            user_profiles!inner(*)
+          ''')
+          .eq('auth_user_id', authUserId)
+          .maybeSingle();
+
+      if (response != null) {
+        AppLogger.success('Complete user data loaded', tag: _logTag);
+
+        // Flatten the structure for easier access
+        final userData = Map<String, dynamic>.from(response);
+        final profileData = userData['user_profiles'] as Map<String, dynamic>;
+        userData.remove('user_profiles');
+        userData.addAll(profileData);
+
+        return userData;
+      } else {
+        AppLogger.warning('Complete user data not found', tag: _logTag);
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get complete user data: $e',
+        tag: _logTag,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Update last login timestamp for user
+  static Future<bool> updateLastLogin(String authUserId) async {
+    try {
+      AppLogger.info('Updating last login for user: $authUserId', tag: _logTag);
+
+      await _supabase
+          .from('users')
+          .update({'last_login': DateTime.now().toIso8601String()})
+          .eq('auth_user_id', authUserId);
+
+      AppLogger.success('Last login updated successfully', tag: _logTag);
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to update last login: $e',
+        tag: _logTag,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Get user's gemstones balance from user_profiles table
   static Future<int?> getUserGemstones(String userId) async {
     try {
       AppLogger.info('Getting user gemstones balance', tag: _logTag);
 
       final response = await _supabase
-          .from('users') // Using your actual table name
+          .from('user_profiles') // Using unified user_profiles table
           .select('gemstones')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single();
 
       final gemstones = response['gemstones'] as int;
@@ -244,9 +346,9 @@ class SupabaseDataService {
       );
 
       await _supabase
-          .from('users') // Using your actual table name
+          .from('user_profiles') // Using unified user_profiles table
           .update({'gemstones': newBalance})
-          .eq('id', userId);
+          .eq('user_id', userId);
 
       AppLogger.success('User gemstones updated successfully', tag: _logTag);
       return true;
@@ -267,12 +369,12 @@ class SupabaseDataService {
       AppLogger.info('Getting user pro status', tag: _logTag);
 
       final response = await _supabase
-          .from('users') // Using your actual table name
-          .select('pro_status')
-          .eq('id', userId)
+          .from('user_profiles') // Using unified user_profiles table
+          .select('is_pro')
+          .eq('user_id', userId)
           .single();
 
-      final proStatus = response['pro_status'] as bool;
+      final proStatus = response['is_pro'] as bool;
 
       AppLogger.success('User pro status: $proStatus', tag: _logTag);
       return proStatus;
@@ -293,9 +395,9 @@ class SupabaseDataService {
       AppLogger.info('Updating user pro status to $proStatus', tag: _logTag);
 
       await _supabase
-          .from('users') // Using your actual table name
-          .update({'pro_status': proStatus})
-          .eq('id', userId);
+          .from('user_profiles') // Using unified user_profiles table
+          .update({'is_pro': proStatus})
+          .eq('user_id', userId);
 
       AppLogger.success('User pro status updated successfully', tag: _logTag);
       return true;
@@ -317,9 +419,9 @@ class SupabaseDataService {
 
       // Check when user last received free gemstones
       final response = await _supabase
-          .from('users') // Using your actual table name
+          .from('user_profiles') // Using unified user_profiles table
           .select('last_free_gemstones_grant, gemstones')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single();
 
       final lastGrant = response['last_free_gemstones_grant'];
@@ -340,12 +442,12 @@ class SupabaseDataService {
 
         // Update gemstones and last grant timestamp
         await _supabase
-            .from('users') // Using your actual table name
+            .from('user_profiles') // Using unified user_profiles table
             .update({
               'gemstones': newBalance,
               'last_free_gemstones_grant': now.toIso8601String(),
             })
-            .eq('id', userId);
+            .eq('user_id', userId);
 
         AppLogger.success(
           'Granted $freeGemstonesAmount free gemstones. New balance: $newBalance',
@@ -377,19 +479,19 @@ class SupabaseDataService {
 
       // Check if user exists
       final existingUser = await _supabase
-          .from('users') // Using your actual table name
+          .from('user_profiles') // Using unified user_profiles table
           .select('id')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .maybeSingle();
 
       if (existingUser == null) {
         // Create new user profile
         await _supabase
-            .from('users') // Using your actual table name
+            .from('user_profiles') // Using unified user_profiles table
             .insert({
-              'id': userId,
+              'user_id': userId,
               'gemstones': 10, // Starting gemstones
-              'pro_status': false,
+              'is_pro': false,
               'created_at': DateTime.now().toIso8601String(),
             });
 
@@ -439,6 +541,111 @@ class SupabaseDataService {
         stackTrace: stackTrace,
       );
       return null;
+    }
+  }
+
+  // ===== USER PROFILE MANAGEMENT =====
+
+  /// Get user profile from database
+  static Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    try {
+      AppLogger.info('Fetching user profile for user: $userId', tag: _logTag);
+
+      final response = await _supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (response != null) {
+        AppLogger.debug('User profile loaded successfully', tag: _logTag);
+        return response;
+      } else {
+        AppLogger.warning(
+          'User profile not found for user: $userId',
+          tag: _logTag,
+        );
+        return null;
+      }
+    } catch (e) {
+      AppLogger.error('Failed to fetch user profile', error: e, tag: _logTag);
+      return null;
+    }
+  }
+
+  /// Update user profile in database
+  static Future<bool> updateUserProfile(
+    String userId,
+    Map<String, dynamic> updates,
+  ) async {
+    try {
+      AppLogger.info('Updating user profile for user: $userId', tag: _logTag);
+      AppLogger.debug(
+        'Profile updates: ${updates.keys.join(', ')}',
+        tag: _logTag,
+      );
+
+      await _supabase
+          .from('user_profiles')
+          .update({...updates, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('user_id', userId);
+
+      AppLogger.info('User profile updated successfully', tag: _logTag);
+      return true;
+    } catch (e) {
+      AppLogger.error('Failed to update user profile', error: e, tag: _logTag);
+      return false;
+    }
+  }
+
+  /// Delete all user data (for account deletion)
+  static Future<bool> deleteUserData(String userId) async {
+    try {
+      AppLogger.info('Deleting all data for user: $userId', tag: _logTag);
+
+      // Delete user's assets first (due to foreign key constraints)
+      await _supabase.from('assets').delete().eq('user_id', userId);
+      AppLogger.debug('User assets deleted', tag: _logTag);
+
+      // Delete generation history if exists
+      await _supabase.from('generation_history').delete().eq('user_id', userId);
+      AppLogger.debug('User generation history deleted', tag: _logTag);
+
+      // Delete user profile last
+      await _supabase.from('user_profiles').delete().eq('user_id', userId);
+      AppLogger.debug('User profile deleted', tag: _logTag);
+
+      AppLogger.info('All user data deleted successfully', tag: _logTag);
+      return true;
+    } catch (e) {
+      AppLogger.error('Failed to delete user data', error: e, tag: _logTag);
+      return false;
+    }
+  }
+
+  /// Get all user assets for data export
+  static Future<List<Map<String, dynamic>>> getUserAssets(String userId) async {
+    try {
+      AppLogger.info('Fetching all assets for user data export', tag: _logTag);
+
+      final response = await _supabase
+          .from('assets')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      AppLogger.info(
+        'Fetched ${response.length} assets for export',
+        tag: _logTag,
+      );
+      return response;
+    } catch (e) {
+      AppLogger.error(
+        'Failed to fetch user assets for export',
+        error: e,
+        tag: _logTag,
+      );
+      return [];
     }
   }
 }
