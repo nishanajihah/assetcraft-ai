@@ -231,7 +231,7 @@ class _CostMonitoringWidgetState extends State<CostMonitoringWidget> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
 
             const SizedBox(height: 12),

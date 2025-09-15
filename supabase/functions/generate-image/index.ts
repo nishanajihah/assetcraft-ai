@@ -94,23 +94,25 @@ async function callVertexAIImageGeneration(
 ): Promise<any> {
   const location = "us-central1"; // Default location for Vertex AI
   
-  const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${modelVersion}:predict`;
+  // Use the newer generateImages endpoint for Imagen 4.0
+  const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${modelVersion}:generateImages`;
   
   console.log('[API] Calling Vertex AI endpoint:', endpoint);
   console.log('[API] Model:', modelVersion);
   console.log('[API] Prompt:', prompt.substring(0, 100) + '...');
 
-  // Construct the request payload for Imagen
+  // Updated payload for Imagen 4.0 generateImages endpoint
   const payload = {
     instances: [
       {
-        prompt: prompt,
+        prompt: prompt
       }
     ],
     parameters: {
       sampleCount: 1,
-      aspectRatio: "1:1", // Default aspect ratio
-      includeRaiReason: false,
+      aspectRatio: "1:1",
+      safetyFilterLevel: "block_some",
+      personGeneration: "dont_allow"
     }
   };
 
@@ -125,17 +127,20 @@ async function callVertexAIImageGeneration(
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('[API] Vertex AI API error:', error);
+    console.error('[API] Vertex AI API error status:', response.status);
+    console.error('[API] Vertex AI API error details:', error);
+    console.error('[API] Request payload was:', JSON.stringify(payload, null, 2));
     throw new Error(`Vertex AI API error: ${response.status} - ${error}`);
   }
 
   const result = await response.json();
   console.log('[API] Vertex AI response received successfully');
+  console.log('[API] Response structure:', JSON.stringify(result, null, 2));
   return result;
 }
 
-serve(async (req) => {
-  // Handle CORS
+serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -147,21 +152,60 @@ serve(async (req) => {
     })
   }
 
+  // Only allow POST requests - ensures function only triggers on button click
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Method not allowed. Only POST requests are accepted.' 
+      }),
+      { 
+        status: 405,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        }
+      }
+    );
+  }
+
   try {
-    console.log('[INIT] Starting image generation request');
+    console.log('[INIT] Image generation request received from user action');
+    console.log('[INIT] Request method:', req.method);
+    console.log('[INIT] Request URL:', req.url);
     
     // Parse request body
     const requestBody = await req.json() as VertexAIRequest;
     console.log('[REQUEST] Received request:', {
       prompt: requestBody.prompt?.substring(0, 100) + '...',
+      promptLength: requestBody.prompt?.length || 0,
     });
 
-    // Validate required parameters
+    // Strict validation - ensures this only runs with valid user input
     if (!requestBody.prompt || typeof requestBody.prompt !== 'string') {
+      console.log('[VALIDATION] Invalid prompt - rejecting request');
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Missing or invalid prompt parameter' 
+        }),
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          }
+        }
+      );
+    }
+
+    // Additional validation - prompt must be meaningful
+    if (requestBody.prompt.trim().length < 3) {
+      console.log('[VALIDATION] Prompt too short - rejecting request');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Prompt must be at least 3 characters long' 
         }),
         { 
           status: 400,
@@ -179,7 +223,9 @@ serve(async (req) => {
     
     // Get secrets from Supabase environment
     const vertexCredentials = Deno.env.get('VERTEX_AI_CREDENTIALS');
-    const imagenModel = Deno.env.get('IMAGEN_MODEL');
+    
+    // Use Imagen 4.0 directly (no need for environment variable)
+    const imagenModel = 'imagen-4.0-generate-001';
 
     if (!vertexCredentials) {
       console.error('[SECRETS] VERTEX_AI_CREDENTIALS not found in environment');
@@ -198,24 +244,7 @@ serve(async (req) => {
       );
     }
 
-    if (!imagenModel) {
-      console.error('[SECRETS] IMAGEN_MODEL not found in environment');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Imagen model not configured' 
-        }),
-        { 
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          }
-        }
-      );
-    }
-
-    console.log('[SECRETS] Using model:', imagenModel);
+    console.log('[MODEL] Using Imagen model:', imagenModel);
 
     // Parse the credentials JSON
     let credentials: GoogleCredentials;
@@ -272,11 +301,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[ERROR] Image generation failed:', error);
+    console.error('[ERROR] Error type:', typeof error);
+    console.error('[ERROR] Error details:', error instanceof Error ? error.message : String(error));
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Internal server error',
+        error: error instanceof Error ? error.message : 'Internal server error',
         timestamp: new Date().toISOString()
       }),
       {

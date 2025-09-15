@@ -86,9 +86,9 @@ class AppInitializationService {
         '🌍 Environment: ${AppConfig.environment}',
         tag: 'AppInit',
       );
-      AppLogger.info('� API URL: ${AppConfig.apiUrl}', tag: 'AppInit');
+      AppLogger.info('🌐 API URL: ${AppConfig.apiUrl}', tag: 'AppInit');
       AppLogger.info(
-        '🤖 Imagen Model: ${AppConfig.imagenModel}',
+        '🤖 AI Models: Configured in Edge Functions',
         tag: 'AppInit',
       );
 
@@ -218,7 +218,7 @@ class AppInitializationService {
       '   RevenueCat Android: ${AppConfig.hasRevenueCatAndroid ? "✅ Configured" : "❌ Not configured"}',
       tag: 'AppInit',
     );
-    AppLogger.info('   Imagen Model: ${AppConfig.imagenModel}', tag: 'AppInit');
+    AppLogger.info('   AI Models: Managed in Edge Functions', tag: 'AppInit');
   }
 
   /// Get environment variable with optional default value

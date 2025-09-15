@@ -52,18 +52,12 @@ class AppConfig {
   static String get geminiApiKey =>
       dotenv.env['GEMINI_API_KEY'] ?? 'AIzaSyDauJ27wFYUpR0b7DTV_pnp0bzosGuv0cM';
 
-  static String get geminiTextModel =>
-      dotenv.env['GEMINI_TEXT_MODEL'] ?? 'gemini-1.5-flash';
-
-  static String get geminiSuggestionsModel =>
-      dotenv.env['GEMINI_SUGGESTIONS_MODEL'] ?? 'gemini-1.5-flash';
+  // Note: Model versions are hardcoded in edge functions for easier management
+  // No need for GEMINI_TEXT_MODEL, GEMINI_SUGGESTIONS_MODEL, or IMAGEN_MODEL here
 
   // Vertex AI Configuration (for image generation)
   static String get vertexAiCredentials =>
       dotenv.env['VERTEX_AI_CREDENTIALS'] ?? '';
-
-  static String get imagenModel =>
-      dotenv.env['IMAGEN_MODEL'] ?? 'imagen-4.0-generate-001';
 
   // RevenueCat Configuration
   static String get revenueCatIosKey => dotenv.env['REVENUECAT_IOS_KEY'] ?? '';
@@ -116,8 +110,7 @@ class AppConfig {
     AppLogger.info('🔧 AppConfig Summary:', tag: 'AppConfig');
     AppLogger.info('   Environment: $environment', tag: 'AppConfig');
     AppLogger.info('   API URL: $apiUrl', tag: 'AppConfig');
-    AppLogger.info('   Imagen Model: $imagenModel', tag: 'AppConfig');
-    AppLogger.info('   Gemini Model: $geminiTextModel', tag: 'AppConfig');
+    AppLogger.info('   Models: Configured in Edge Functions', tag: 'AppConfig');
     AppLogger.info(
       '   Has Vertex AI Credentials: $hasVertexAiCredentials',
       tag: 'AppConfig',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
@@ -25,18 +26,15 @@ import 'screens/login_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Show startup banner
+  // SIMPLIFIED INITIALIZATION - No blocking operations
   AppLogger.startupBanner();
-  AppLogger.separator(title: 'INITIALIZATION');
 
-  // Initialize all app services using the centralized service
-  final initSuccess = await AppInitializationService.initialize();
-
-  if (!initSuccess) {
-    AppLogger.error(
-      '❌ Failed to initialize app: ${AppInitializationService.initializationError}',
-      tag: 'Main',
-    );
+  try {
+    // Only load .env file (essential for app configuration)
+    await dotenv.load(fileName: ".env");
+    AppLogger.success('✅ Environment loaded', tag: 'Main');
+  } catch (e) {
+    AppLogger.warning('⚠️ Using default config: $e', tag: 'Main');
   }
 
   runApp(const AssetCraftAIApp());

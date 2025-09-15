@@ -53,7 +53,8 @@ class AIGenerationProvider extends ChangeNotifier {
   bool get isLoadingHistory => _isLoadingHistory;
 
   // Configuration getters
-  String get currentImagenModel => AppConfig.imagenModel;
+  String get currentImagenModel =>
+      'imagen-4.0-generate-001'; // Hardcoded for consistency
   bool get hasVertexAiCredentials => AppConfig.hasVertexAiCredentials;
 
   /// Set generation parameters
