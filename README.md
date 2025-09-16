@@ -1,4 +1,4 @@
-# assetcraft_ai_v2
+# assetcraft_ai
 
 A new Flutter project.
 

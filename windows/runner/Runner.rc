@@ -89,12 +89,12 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "AssetCraft AI" "\0"
+            VALUE "CompanyName", "com.nishanajihah" "\0"
+            VALUE "FileDescription", "assetcraft_ai" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "AssetCraft AI" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "AssetCraft AI.exe" "\0"
+            VALUE "InternalName", "assetcraft_ai" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.nishanajihah. All rights reserved." "\0"
+            VALUE "OriginalFilename", "assetcraft_ai.exe" "\0"
             VALUE "ProductName", "AssetCraft AI" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END

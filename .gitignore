@@ -1,5 +1,3 @@
-# 🚀 AssetCraft AI - Enhanced Git Ignore Configuration
-
 # Miscellaneous
 *.class
 *.log
@@ -19,55 +17,6 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
-
-# 🔐 Environment & Security Files
-.env
-.env.*
-*.pem
-*.key
-*.p12
-*.keystore
-*.jks
-key.properties
-google-services.json
-GoogleService-Info.plist
-
-# 🔑 API Keys & Secrets
-**/secrets/
-**/config/secrets/
-api_keys.dart
-credentials.json
-service-account*.json
-
-# 🗄️ Database & Local Storage
-*.db
-*.sqlite
-*.sqlite3
-*.hive
-/data/
-user_data/
-
-# 🧪 Testing & Development
-test_*.json
-temp_read/
-/test_data/
-*.test
-coverage.json
-
-# 🗄️ Supabase CLI temporary files
-supabase/.temp/
-supabase/.branches/
-supabase/logs/
-
-# 📊 Analytics & Logs
-*.log
-logs/
-crash_reports/
-
-# 🛠️ Development Tools
-.vscode/settings.json
-.vscode/launch.json
-*.code-workspace
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -95,10 +44,171 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# 🗄️ Supabase CLI temporary files (should not be committed)
-supabase/.temp/
-supabase/.branches/
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
 
-# 📝 Markdown files (exclude all except README.md)
+# Supabase
+/supabase/.branches
+/supabase/.temp
+/supabase/logs
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Temporary folders
+tmp/
+temp/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+# Markdown files (ignore all except README.md)
 *.md
+*.MD
+*.markdown
+*.MARKDOWN
 !README.md
+!readme.md
+
+# Additional Flutter/Dart ignores
+.packages
+.flutter-plugins
+.metadata
+analysis_options.yaml
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.config.dart
+*.gr.dart
+
+# Language files
+lib/generated/
+lib/l10n/
+
+# Test related
+/test_driver/
+/integration_test/results/

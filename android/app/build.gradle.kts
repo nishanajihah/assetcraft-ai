@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.nishanajihah.assetcraftai"
+    namespace = "com.nishanajihah.assetcraft_ai"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -19,14 +19,9 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    // Suppress obsolete Java version warnings
-    tasks.withType<JavaCompile> {
-        options.compilerArgs.addAll(listOf("-Xlint:-options"))
-    }
-
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.nishanajihah.assetcraftai"
+        applicationId = "com.nishanajihah.assetcraft_ai"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
